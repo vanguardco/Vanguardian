@@ -32,6 +32,7 @@ from apps.crf.models import (
     CrfFieldValidationRuleTypeChoices,
     CrfSectionTemplate,
     CrfTemplate,
+    CrfTemplateTranslation,
 )
 from apps.datacapture.infrastructure.models.capture import (
     DataCapturePageEntrySnapshot,
@@ -532,23 +533,17 @@ class DjangoDataCapturePageRepository:
         site_id: int | None = None,
     ) -> list[dict[str, object]]:
         queryset = (
-            DataCapturePageState.objects.filter(deleted=False)
-            .select_related(
-                "subject",
-                "subject__site",
-                "visit",
-                "visit__event_definition",
-                "crf_template",
-            )
-            .only(
+            DataCapturePageState.objects.filter(deleted=False).values(
                 "id",
                 "crf_template_id",
+                "event_form_binding_id",
                 "subject_id",
                 "visit_id",
                 "subject__study_id",
                 "subject__site_id",
                 "subject__subject_code",
                 "subject__screening_code",
+                "subject__randomization__randomization_number",
                 "visit__event_code_snapshot",
                 "visit__event_name_snapshot",
                 "visit__event_definition__code",
@@ -563,30 +558,65 @@ class DjangoDataCapturePageRepository:
         if site_id is not None:
             queryset = queryset.filter(subject__site_id=site_id)
 
+        page_state_rows = list(queryset.order_by("id"))
+        template_ids = {
+            int(row["crf_template_id"])
+            for row in page_state_rows
+            if row["crf_template_id"] is not None
+        }
+        current_language = str(get_language() or "").split("-")[0].lower()
+        translations_by_template: dict[int, list[tuple[str, str]]] = {}
+        if template_ids:
+            translation_rows = CrfTemplateTranslation.objects.filter(
+                master_id__in=template_ids,
+            ).values("master_id", "language_code", "name")
+            for translation in translation_rows:
+                translations_by_template.setdefault(int(translation["master_id"]), []).append(
+                    (
+                        str(translation["language_code"] or "").split("-")[0].lower(),
+                        str(translation["name"] or "").strip(),
+                    )
+                )
+
         contexts: list[dict[str, object]] = []
-        for page_state in queryset.order_by("id"):
-            subject = page_state.subject
-            visit = page_state.visit
-            event_definition = getattr(visit, "event_definition", None)
-            crf_template = page_state.crf_template
-            crf_label = (
-                crf_template.safe_translation_getter("name", default="", any_language=True)
-                if hasattr(crf_template, "safe_translation_getter")
-                else ""
+        for row in page_state_rows:
+            translations = translations_by_template.get(int(row["crf_template_id"]), []) if row["crf_template_id"] else []
+            crf_label = next(
+                (name for language_code, name in translations if language_code == current_language and name),
+                "",
             )
+            if not crf_label:
+                crf_label = next((name for _, name in translations if name), "")
+            crf_label = crf_label or str(row["crf_template__code"] or "").strip()
             contexts.append(
                 {
-                    "page_state_id": int(page_state.pk),
-                    "study_id": int(subject.study_id) if subject.study_id else None,
-                    "site_id": int(subject.site_id) if subject.site_id else None,
-                    "subject_id": int(subject.pk) if subject.pk else None,
-                    "subject_code": str(subject.subject_code or "").strip(),
-                    "screening_code": str(subject.screening_code or "").strip(),
-                    "event_instance_id": int(visit.pk) if visit.pk else None,
-                    "event_code": str(visit.event_code_snapshot or getattr(event_definition, "code", "") or "").strip(),
-                    "event_label": str(visit.event_name_snapshot or getattr(event_definition, "name", "") or "").strip(),
-                    "crf_page_label": str(crf_label or crf_template.code or "").strip(),
-                    "page_template_id": int(page_state.crf_template_id) if page_state.crf_template_id else None,
+                    "page_state_id": int(row["id"]),
+                    "study_id": int(row["subject__study_id"]) if row["subject__study_id"] else None,
+                    "site_id": int(row["subject__site_id"]) if row["subject__site_id"] else None,
+                    "subject_id": int(row["subject_id"]) if row["subject_id"] else None,
+                    "subject_code": str(row["subject__subject_code"] or "").strip(),
+                    "screening_code": str(row["subject__screening_code"] or "").strip(),
+                    "randomization_code": str(
+                        row["subject__randomization__randomization_number"] or ""
+                    ).strip(),
+                    "event_instance_id": int(row["visit_id"]) if row["visit_id"] else None,
+                    "event_code": str(
+                        row["visit__event_code_snapshot"]
+                        or row["visit__event_definition__code"]
+                        or ""
+                    ).strip(),
+                    "event_label": str(
+                        row["visit__event_name_snapshot"]
+                        or row["visit__event_definition__name"]
+                        or ""
+                    ).strip(),
+                    "crf_page_label": crf_label,
+                    "page_template_id": int(row["crf_template_id"]) if row["crf_template_id"] else None,
+                    "event_form_binding_id": (
+                        int(row["event_form_binding_id"])
+                        if row["event_form_binding_id"]
+                        else None
+                    ),
                 }
             )
         return contexts

@@ -64,6 +64,7 @@ class ReconcileValidationIssueStatusChoices(models.TextChoices):
 class ReconcileValidationIssueSnapshotResultChoices(models.TextChoices):
     FAIL = "FAIL", _("Fail")
     PASS = "PASS", _("Pass")
+    REOPENED = "REOPENED", _("Reopened")
 
 
 class ReconcileDataQuery(models.Model):

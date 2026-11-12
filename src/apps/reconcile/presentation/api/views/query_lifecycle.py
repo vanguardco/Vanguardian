@@ -17,7 +17,7 @@ ACTION_PERMISSION_BY_ACTION = {
     "request_clarification": "QUERY.RETURN",
     "resolve": "QUERY.CLOSE",
     "close": "QUERY.CLOSE",
-    "reopen": "QUERY.RETURN",
+    "reopen": "QUERY.REOPEN",
     "cancel": "QUERY.CANCEL",
 }
 
@@ -56,9 +56,7 @@ class QueryLifecycleActionAPIView(LoginRequiredMixin, ContextPermissionRequiredM
         scope = service.query_action_scope(dataquery_id=int(kwargs["query_id"]))
         if scope is None:
             return JsonResponse({"error": ["Query not found."]}, status=404)
-        context = get_page_state_contexts(page_state_ids=[int(scope["page_state_id"])]).get(
-            int(scope["page_state_id"])
-        )
+        context = get_page_state_contexts(page_state_ids=[int(scope["page_state_id"])]).get(int(scope["page_state_id"]))
         study_id = int(kwargs["study_id"])
         if context is None or int(getattr(context, "study_id", 0) or 0) != study_id:
             return JsonResponse({"error": ["Query not found."]}, status=404)

@@ -185,6 +185,7 @@
                             <div hidden data-validation-issue-history-source>
                                 {% for history in row.validation_issue_histories %}
                                     <div data-validation-issue-history
+                                         data-history-validation-issue-id="{{ history.validation_issue_id|default:'' }}"
                                          data-history-dataquery-id="{{ history.dataquery_id|default:'' }}"
                                          data-history-status="{{ history.status|default:''|escape }}"
                                          data-history-label="{{ history.label|escape }}"

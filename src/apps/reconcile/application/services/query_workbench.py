@@ -72,16 +72,24 @@ class QueryListItemDTO:
 @dataclass(frozen=True)
 class ValidationIssueListItemDTO:
     issue_id: int
+    study_id: int | None
+    site_id: int | None
+    subject_id: int | None
+    page_state_id: int
     status: str
     severity: str
     message: str
     failed_value: object
     created_at: object
     resolved_at: object
+    acknowledged_at: object
+    acknowledged_by_display: str
     subject_code: str
     screening_code: str
     event_label: str
     crf_page_label: str
+    field_label: str
+    review_focus_url: str
     page_state_label: str
 
 
@@ -148,13 +156,16 @@ class QueryWorkbenchReader:
         if bucket == "validation_issues":
             issues = self.repository.list_workbench_validation_issues(
                 page_state_ids=page_state_ids,
-                search=search,
+                search=query_search,
+                severity=severity,
             )
-        user_display_by_id = self._user_display_map(self._row_user_ids(rows))
+        user_ids = self._row_user_ids(rows)
+        user_ids.update(issue.get("acknowledged_by_id") for issue in issues)
+        user_display_by_id = self._user_display_map(user_ids)
         return QueryWorkbenchResultDTO(
             summary=summary,
             items=[self._to_query_item(row, contexts, user_display_by_id=user_display_by_id) for row in rows],
-            validation_issues=[self._to_validation_issue_item(row, contexts) for row in issues],
+            validation_issues=[self._to_validation_issue_item(row, contexts, user_display_by_id=user_display_by_id) for row in issues],
         )
 
     def read_detail(
@@ -173,9 +184,7 @@ class QueryWorkbenchReader:
             return None
         contexts = get_page_state_contexts(page_state_ids=[int(row["page_state_id"])])
         raw_threads = row.get("threads", [])
-        user_display_by_id = self._user_display_map(
-            self._row_user_ids([row]) | {thread.get("author_id") for thread in raw_threads}
-        )
+        user_display_by_id = self._user_display_map(self._row_user_ids([row]) | {thread.get("author_id") for thread in raw_threads})
         item = self._to_query_item(row, contexts, user_display_by_id=user_display_by_id)
         threads = [
             QueryThreadDTO(
@@ -226,6 +235,7 @@ class QueryWorkbenchReader:
                 (
                     context.subject_code,
                     context.screening_code,
+                    getattr(context, "randomization_code", ""),
                     context.event_code,
                     context.event_label,
                     context.crf_page_label,
@@ -302,29 +312,50 @@ class QueryWorkbenchReader:
         study_id = getattr(context, "study_id", None)
         subject_id = getattr(context, "subject_id", None)
         event_instance_id = getattr(context, "event_instance_id", None)
-        page_template_id = getattr(context, "page_template_id", None)
-        if not (study_id and subject_id and event_instance_id and page_template_id):
+        form_id = getattr(context, "event_form_binding_id", None) or getattr(
+            context,
+            "page_template_id",
+            None,
+        )
+        if not (study_id and subject_id and event_instance_id and form_id):
             return ""
         detail_url = reverse(
             "subject:subject_detail",
             kwargs={"study_id": study_id, "subject_id": subject_id},
         )
-        return f"{detail_url}?mode=verification&event={event_instance_id}&form={page_template_id}"
+        return f"{detail_url}?mode=verification&event={event_instance_id}&form={form_id}"
 
-    def _to_validation_issue_item(self, row: dict[str, object], contexts) -> ValidationIssueListItemDTO:
+    def _to_validation_issue_item(
+        self,
+        row: dict[str, object],
+        contexts,
+        *,
+        user_display_by_id: dict[int, str],
+    ) -> ValidationIssueListItemDTO:
         context = contexts.get(int(row["page_state_id"]))
         return ValidationIssueListItemDTO(
             issue_id=row["issue_id"],
+            study_id=getattr(context, "study_id", None),
+            site_id=getattr(context, "site_id", None),
+            subject_id=getattr(context, "subject_id", None),
+            page_state_id=int(row["page_state_id"]),
             status=str(row.get("status") or ""),
             severity=str(row.get("severity") or ""),
             message=str(row.get("message") or ""),
             failed_value=row.get("failed_value"),
             created_at=row.get("created_at"),
             resolved_at=row.get("resolved_at"),
+            acknowledged_at=row.get("acknowledged_at"),
+            acknowledged_by_display=self._user_display(
+                row.get("acknowledged_by_id"),
+                user_display_by_id,
+            ),
             subject_code=getattr(context, "subject_code", "") or "—",
             screening_code=getattr(context, "screening_code", "") or "—",
             event_label=getattr(context, "event_label", "") or f"Event #{getattr(context, 'event_instance_id', '')}",
             crf_page_label=getattr(context, "crf_page_label", "") or f"Page State #{row['page_state_id']}",
+            field_label=str(row.get("field_label") or ""),
+            review_focus_url=self._review_focus_url(context),
             page_state_label=f"Page State #{row['page_state_id']}",
         )
 
@@ -338,11 +369,7 @@ class QueryWorkbenchReader:
 
     @staticmethod
     def _user_display_map(user_ids) -> dict[int, str]:
-        normalized_ids = {
-            int(user_id)
-            for user_id in user_ids or ()
-            if user_id not in (None, "")
-        }
+        normalized_ids = {int(user_id) for user_id in user_ids or () if user_id not in (None, "")}
         if not normalized_ids:
             return {}
         from apps.identity.public import get_user_display_map

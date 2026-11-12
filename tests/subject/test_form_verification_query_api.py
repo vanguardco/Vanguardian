@@ -67,18 +67,15 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ) as get_page_state_id,
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="submitted",
             ) as get_page_state_status,
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
@@ -137,18 +134,15 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="submitted",
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
@@ -183,13 +177,11 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="in_progress",
             ),
             patch(
@@ -224,18 +216,15 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="submitted",
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=True,
             ),
             patch(
@@ -286,23 +275,19 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="submitted",
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_latest_submitted_page_entry_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_latest_submitted_page_entry_for_subject_visit_crf",
                 return_value=SimpleNamespace(id=101, entry_version="1"),
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=True,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "merge_form_verification_checked_fields_into_page_state_final_data",
+                "apps.subject.presentation.web.views.verification_verify_checked.merge_form_verification_checked_fields_into_page_state_final_data",
                 return_value=(True, "verified", [], []),
             ) as merge_checked,
         ):
@@ -345,23 +330,19 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="submitted",
             ) as get_page_state_status,
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_latest_submitted_page_entry_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_latest_submitted_page_entry_for_subject_visit_crf",
                 return_value=SimpleNamespace(id=101, entry_version="1"),
             ) as get_latest_submitted,
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "merge_form_verification_checked_fields_into_page_state_final_data",
+                "apps.subject.presentation.web.views.verification_verify_checked.merge_form_verification_checked_fields_into_page_state_final_data",
                 return_value=(False, "under_review", ["field_review_not_ready:12"], [12]),
             ) as merge_checked,
         ):
@@ -399,13 +380,11 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "finalize_page_data_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.finalize_page_data_for_subject_visit_crf",
                 return_value="finalized",
             ) as finalize_page_data,
         ):
@@ -438,13 +417,11 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=True,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "finalize_page_data_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.finalize_page_data_for_subject_visit_crf",
                 return_value="finalized",
             ) as finalize_page_data,
         ):
@@ -475,8 +452,7 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
         request.user = SimpleNamespace(id=7)
 
         with patch(
-            "apps.subject.presentation.web.views.verification_verify_checked."
-            "lock_page_for_subject_visit_crf",
+            "apps.subject.presentation.web.views.verification_verify_checked.lock_page_for_subject_visit_crf",
             return_value="locked",
         ) as lock_page:
             response = SubjectFormVerificationLockPageView().post(
@@ -515,13 +491,11 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="submitted",
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_latest_submitted_page_entry_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_latest_submitted_page_entry_for_subject_visit_crf",
                 return_value=SimpleNamespace(
                     id=102,
                     entry_version="2",
@@ -529,8 +503,7 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
                 ),
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_entry_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_entry_for_subject_visit_crf",
                 return_value=SimpleNamespace(
                     id=101,
                     entry_version="1",
@@ -538,21 +511,18 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
                 ),
             ) as get_review_entry,
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "CrfContextAdapter.list_template_fields_with_ui_config",
+                "apps.subject.presentation.web.views.verification_verify_checked.CrfContextAdapter.list_template_fields_with_ui_config",
                 return_value=[
                     {"id": 11, "field_key": "ICF_DATE"},
                     {"id": 12, "field_key": "AGE"},
                 ],
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "merge_form_verification_checked_fields_into_page_state_final_data",
+                "apps.subject.presentation.web.views.verification_verify_checked.merge_form_verification_checked_fields_into_page_state_final_data",
                 return_value=(False, "under_review", ["field_review_not_ready:11"], []),
             ) as merge_checked,
         ):
@@ -610,13 +580,11 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="submitted",
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_latest_submitted_page_entry_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_latest_submitted_page_entry_for_subject_visit_crf",
                 return_value=SimpleNamespace(
                     id=102,
                     entry_version="2",
@@ -624,8 +592,7 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
                 ),
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_entry_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_entry_for_subject_visit_crf",
                 return_value=SimpleNamespace(
                     id=101,
                     entry_version="1",
@@ -633,18 +600,15 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
                 ),
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "CrfContextAdapter.list_template_fields_with_ui_config",
+                "apps.subject.presentation.web.views.verification_verify_checked.CrfContextAdapter.list_template_fields_with_ui_config",
                 return_value=[{"id": 11, "field_key": "ICF_DATE"}],
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "merge_form_verification_checked_fields_into_page_state_final_data",
+                "apps.subject.presentation.web.views.verification_verify_checked.merge_form_verification_checked_fields_into_page_state_final_data",
             ) as merge_checked,
         ):
             response = SubjectFormVerificationVerifyCheckedView().post(
@@ -680,17 +644,14 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="verified",
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_latest_submitted_page_entry_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_latest_submitted_page_entry_for_subject_visit_crf",
             ) as get_latest_submitted,
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "merge_form_verification_checked_fields_into_page_state_final_data",
+                "apps.subject.presentation.web.views.verification_verify_checked.merge_form_verification_checked_fields_into_page_state_final_data",
             ) as merge_checked,
         ):
             response = SubjectFormVerificationVerifyCheckedView().post(
@@ -724,23 +685,19 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="under_review",
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_latest_submitted_page_entry_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_latest_submitted_page_entry_for_subject_visit_crf",
                 return_value=SimpleNamespace(id=101, entry_version="1"),
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "merge_form_verification_checked_fields_into_page_state_final_data",
+                "apps.subject.presentation.web.views.verification_verify_checked.merge_form_verification_checked_fields_into_page_state_final_data",
                 return_value=(False, "under_review", [], []),
             ) as merge_checked,
         ):
@@ -773,23 +730,19 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="submitted",
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_latest_submitted_page_entry_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_latest_submitted_page_entry_for_subject_visit_crf",
                 return_value=SimpleNamespace(id=101, entry_version="1"),
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "merge_form_verification_checked_fields_into_page_state_final_data",
+                "apps.subject.presentation.web.views.verification_verify_checked.merge_form_verification_checked_fields_into_page_state_final_data",
                 return_value=(False, "under_review", [], []),
             ) as merge_checked,
         ):
@@ -820,18 +773,15 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="verified",
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
@@ -880,18 +830,15 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_status_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_status_for_subject_visit_crf",
                 return_value="submitted",
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
@@ -936,13 +883,11 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
@@ -1003,13 +948,11 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(
@@ -1070,8 +1013,7 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
@@ -1131,8 +1073,7 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
@@ -1142,7 +1083,7 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
             patch(
                 "apps.subject.presentation.web.views.verification_verify_checked.user_can_access_permission",
                 return_value=True,
-            ),
+            ) as can_access,
             patch(
                 "apps.subject.presentation.web.views.verification_verify_checked.reopen_reconcile_query",
                 return_value={
@@ -1166,6 +1107,12 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         payload = json.loads(response.content)
         self.assertEqual(payload["status"], "open")
+        can_access.assert_called_once_with(
+            request.user,
+            "QUERY.REOPEN",
+            study_id=1,
+            site_id=5,
+        )
         reopen_query.assert_called_once_with(
             dataquery_id=101,
             page_state_id=23,
@@ -1192,8 +1139,7 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
@@ -1252,8 +1198,7 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
@@ -1265,8 +1210,7 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
                 return_value=True,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "close_reconcile_query",
+                "apps.subject.presentation.web.views.verification_verify_checked.close_reconcile_query",
                 return_value={
                     "dataquery_id": 101,
                     "message_text": "",
@@ -1305,13 +1249,11 @@ class SubjectFormVerificationOpenQueryViewTests(SimpleTestCase):
 
         with (
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "get_page_state_id_for_subject_visit_crf",
+                "apps.subject.presentation.web.views.verification_verify_checked.get_page_state_id_for_subject_visit_crf",
                 return_value=23,
             ),
             patch(
-                "apps.subject.presentation.web.views.verification_verify_checked."
-                "_current_user_matches_submitted_entry_editor",
+                "apps.subject.presentation.web.views.verification_verify_checked._current_user_matches_submitted_entry_editor",
                 return_value=False,
             ),
             patch(

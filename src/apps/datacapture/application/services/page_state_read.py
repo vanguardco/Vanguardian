@@ -14,11 +14,13 @@ class PageStateContextDTO:
     subject_id: int | None
     subject_code: str
     screening_code: str
+    randomization_code: str
     event_instance_id: int | None
     event_code: str
     event_label: str
     crf_page_label: str
     page_template_id: int | None
+    event_form_binding_id: int | None
 
 
 class DataCapturePageStateReadService:
@@ -129,10 +131,12 @@ class DataCapturePageStateReadService:
                 subject_id=row["subject_id"],
                 subject_code=row["subject_code"],
                 screening_code=row["screening_code"],
+                randomization_code=row.get("randomization_code") or "",
                 event_instance_id=row["event_instance_id"],
                 event_code=row["event_code"],
                 event_label=row["event_label"],
                 crf_page_label=row["crf_page_label"],
                 page_template_id=row["page_template_id"],
+                event_form_binding_id=row.get("event_form_binding_id"),
             )
         return contexts

@@ -6,6 +6,7 @@ from django.db.models import F, Q
 from django.utils.translation import get_language
 
 from apps.core.choices import DataCapturePageEntryStatusChoices
+from apps.core.choices.reconcile import ReconcileValidationRunSourceChoices
 from apps.core.form_data_document import (
     build_field_path,
     flatten_form_data_for_export,
@@ -38,9 +39,14 @@ class DjangoReconcileDataQueryWriteRepository:
     def _acknowledgement_matches(issue, evaluation_context):
         if not evaluation_context or issue.status != ReconcileValidationIssueStatusChoices.ACKNOWLEDGED:
             return False
-        snapshot = ReconcileValidationIssueSnapshot.objects.filter(
-            validation_issue_id=issue.pk,
-        ).order_by("-created_at", "-id").values_list("evaluated_values_json", flat=True).first()
+        snapshot = (
+            ReconcileValidationIssueSnapshot.objects.filter(
+                validation_issue_id=issue.pk,
+            )
+            .order_by("-created_at", "-id")
+            .values_list("evaluated_values_json", flat=True)
+            .first()
+        )
         return isinstance(snapshot, dict) and snapshot.get("_validation_context") == evaluation_context
 
     ACTIVE_VALIDATION_ISSUE_STATUSES = (
@@ -64,23 +70,37 @@ class DjangoReconcileDataQueryWriteRepository:
 
     @staticmethod
     def list_active_system_validation_queries(*, page_state_id):
-        return list(ReconcileDataQuery.objects.filter(
-            page_state_id=page_state_id, deleted=False,
-            source=ReconcileDataQuerySourceChoices.SYSTEM, query_type=ReconcileDataQueryTypeChoices.VALIDATION,
-            status__in=(ReconcileDataQueryStatusChoices.OPEN, ReconcileDataQueryStatusChoices.ANSWERED,
-                        ReconcileDataQueryStatusChoices.RESOLVED),
-        ).values("id", "field_template_id", "validation_rule_id", "status"))
+        return list(
+            ReconcileDataQuery.objects.filter(
+                page_state_id=page_state_id,
+                deleted=False,
+                source=ReconcileDataQuerySourceChoices.SYSTEM,
+                query_type=ReconcileDataQueryTypeChoices.VALIDATION,
+                status__in=(ReconcileDataQueryStatusChoices.OPEN, ReconcileDataQueryStatusChoices.ANSWERED, ReconcileDataQueryStatusChoices.RESOLVED),
+            ).values("id", "field_template_id", "validation_rule_id", "status")
+        )
 
     @staticmethod
     def close_passing_system_validation_query(*, dataquery_id, page_state_id, actor_user_id, now):
-        return bool(ReconcileDataQuery.objects.filter(
-            pk=dataquery_id, page_state_id=page_state_id, deleted=False,
-            source=ReconcileDataQuerySourceChoices.SYSTEM, query_type=ReconcileDataQueryTypeChoices.VALIDATION,
-            status__in=(ReconcileDataQueryStatusChoices.OPEN, ReconcileDataQueryStatusChoices.ANSWERED,
-                        ReconcileDataQueryStatusChoices.RESOLVED),
-        ).update(status=ReconcileDataQueryStatusChoices.CLOSED, closed_at=now, closed_by_id=actor_user_id,
-                 resolved_at=now, resolved_by_id=actor_user_id, updated_at=now, updated_by_id=actor_user_id,
-                 resolution_note="Imported value passed the validation rule."))
+        return bool(
+            ReconcileDataQuery.objects.filter(
+                pk=dataquery_id,
+                page_state_id=page_state_id,
+                deleted=False,
+                source=ReconcileDataQuerySourceChoices.SYSTEM,
+                query_type=ReconcileDataQueryTypeChoices.VALIDATION,
+                status__in=(ReconcileDataQueryStatusChoices.OPEN, ReconcileDataQueryStatusChoices.ANSWERED, ReconcileDataQueryStatusChoices.RESOLVED),
+            ).update(
+                status=ReconcileDataQueryStatusChoices.CLOSED,
+                closed_at=now,
+                closed_by_id=actor_user_id,
+                resolved_at=now,
+                resolved_by_id=actor_user_id,
+                updated_at=now,
+                updated_by_id=actor_user_id,
+                resolution_note="Imported value passed the validation rule.",
+            )
+        )
 
     @staticmethod
     def list_field_key_to_id(*, crf_template_id: int) -> dict[str, int]:
@@ -116,12 +136,7 @@ class DjangoReconcileDataQueryWriteRepository:
                 continue
             translations = list(getattr(getattr(ui_config, "translations", None), "all", lambda: [])())
             preferred_translation = next(
-                (
-                    translation
-                    for translation in translations
-                    if str(translation.language_code or "").split("-")[0].lower() == current_language
-                    and translation.options
-                ),
+                (translation for translation in translations if str(translation.language_code or "").split("-")[0].lower() == current_language and translation.options),
                 None,
             )
             fallback_translation = next((translation for translation in translations if translation.options), None)
@@ -252,9 +267,7 @@ class DjangoReconcileDataQueryWriteRepository:
         issues_by_signature: dict[tuple[int | None, str], ReconcileValidationIssue] = {}
         for issue in cls._reusable_validation_issue_queryset(form_instance_id=form_instance_id):
             resolved_rule_id = int(issue.rule_id) if issue.rule_id is not None else None
-            resolved_field_template_id = (
-                int(getattr(issue.field_instance, "field_template_id", 0) or 0) or None
-            )
+            resolved_field_template_id = int(getattr(issue.field_instance, "field_template_id", 0) or 0) or None
             if resolved_field_template_id is None:
                 resolved_field_template_id = int(getattr(issue.rule, "field_template_id", 0) or 0) or None
             signature = cls._validation_issue_signature(
@@ -313,9 +326,7 @@ class DjangoReconcileDataQueryWriteRepository:
 
     @staticmethod
     def get_page_state_data_version(*, page_state_id: int) -> int:
-        return int(
-            DataCapturePageState.objects.filter(pk=page_state_id).values_list("data_version", flat=True).first() or 0
-        )
+        return int(DataCapturePageState.objects.filter(pk=page_state_id).values_list("data_version", flat=True).first() or 0)
 
     @staticmethod
     def _resolve_snapshot_value_for_field(
@@ -344,11 +355,7 @@ class DjangoReconcileDataQueryWriteRepository:
     ) -> int:
         _ = actor_user_id
         normalized_validation_run_id = int(validation_run_id)
-        normalized_evaluated_values_by_field_template_id = (
-            dict(evaluated_values_by_field_template_id)
-            if isinstance(evaluated_values_by_field_template_id, dict)
-            else {}
-        )
+        normalized_evaluated_values_by_field_template_id = dict(evaluated_values_by_field_template_id) if isinstance(evaluated_values_by_field_template_id, dict) else {}
         normalized_data_version = int(data_version) if data_version is not None else 0
         issues_by_signature = cls._list_reusable_validation_issues_by_signature(
             form_instance_id=page_state_id,
@@ -375,8 +382,7 @@ class DjangoReconcileDataQueryWriteRepository:
                 evaluated_values_by_field_template_id=normalized_evaluated_values_by_field_template_id,
             )
             issue = issues_by_signature.get(signature)
-            preserve_acknowledgement = issue is not None and cls._acknowledgement_matches(
-                issue, item.get("evaluation_context"))
+            preserve_acknowledgement = issue is not None and cls._acknowledgement_matches(issue, item.get("evaluation_context"))
             failing_signatures.add(signature)
             if issue is None:
                 issue = ReconcileValidationIssue.objects.create(
@@ -400,11 +406,7 @@ class DjangoReconcileDataQueryWriteRepository:
                 issue.severity = str(item.get("severity") or issue.severity or "").strip()
                 if not preserve_acknowledgement:
                     issue.status = ReconcileValidationIssueStatusChoices.ACKNOWLEDGEMENT_REQUIRED
-                issue.message = (
-                    str(item.get("message") or "").strip()
-                    or issue.message
-                    or "Validation warning requires acknowledgement."
-                )
+                issue.message = str(item.get("message") or "").strip() or issue.message or "Validation warning requires acknowledgement."
                 issue.failed_value = item.get("failed_value")
                 issue.field_instance_id = field_instance_id
                 if not preserve_acknowledgement:
@@ -424,8 +426,9 @@ class DjangoReconcileDataQueryWriteRepository:
                 validation_issue_id=int(issue.pk),
                 validation_run_id=normalized_validation_run_id,
                 result=ReconcileValidationIssueSnapshotResultChoices.FAIL,
-                evaluated_values_json={"_validation_context": item["evaluation_context"], "value": snapshot_value,
-                    "acknowledged": preserve_acknowledgement} if item.get("evaluation_context") else snapshot_value,
+                evaluated_values_json={"_validation_context": item["evaluation_context"], "value": snapshot_value, "acknowledged": preserve_acknowledgement}
+                if item.get("evaluation_context")
+                else snapshot_value,
                 message=str(item.get("message") or "").strip() or issue.message,
                 severity=str(item.get("severity") or "").strip() or issue.severity,
                 data_version=normalized_data_version,
@@ -519,8 +522,9 @@ class DjangoReconcileDataQueryWriteRepository:
                 validation_issue_id=int(issue.pk),
                 validation_run_id=int(validation_run_id),
                 result=ReconcileValidationIssueSnapshotResultChoices.PASS,
-                evaluated_values_json={"_validation_context": evaluation_context, "value": issue.failed_value,
-                    "acknowledged": True} if evaluation_context else (issue.failed_value if issue.failed_value is not None else {}),
+                evaluated_values_json={"_validation_context": evaluation_context, "value": issue.failed_value, "acknowledged": True}
+                if evaluation_context
+                else (issue.failed_value if issue.failed_value is not None else {}),
                 message=acknowledgement_comment or str(issue.message or "").strip(),
                 severity=str(issue.severity or "").strip(),
                 data_version=int(getattr(issue.form_instance, "data_version", 0) or 0),
@@ -529,6 +533,84 @@ class DjangoReconcileDataQueryWriteRepository:
             )
             acknowledged_issue_ids.append(normalized_issue_id)
         return acknowledged_issue_ids
+
+    @classmethod
+    def reopen_validation_issue(
+        cls,
+        *,
+        issue_id: int,
+        page_state_id: int,
+        reason: str,
+        actor_user_id: int | None,
+        now: datetime,
+    ) -> dict[str, object] | None:
+        issue = (
+            ReconcileValidationIssue.objects.select_related("form_instance")
+            .filter(
+                id=issue_id,
+                form_instance_id=page_state_id,
+                status=ReconcileValidationIssueStatusChoices.ACKNOWLEDGED,
+            )
+            .first()
+        )
+        if issue is None:
+            return None
+
+        data_version = int(getattr(issue.form_instance, "data_version", 0) or 0)
+        validation_run = cls.create_validation_run(
+            page_state_id=page_state_id,
+            source=ReconcileValidationRunSourceChoices.VALIDATION_ISSUE_REOPEN,
+            data_version=data_version,
+            actor_user_id=actor_user_id,
+            now=now,
+        )
+        issue.status = ReconcileValidationIssueStatusChoices.ACKNOWLEDGEMENT_REQUIRED
+        issue.acknowledged_by = None
+        issue.acknowledged_at = None
+        issue.acknowledgement_comment = None
+        issue.resolved_at = None
+        issue.save(
+            update_fields=[
+                "status",
+                "acknowledged_by",
+                "acknowledged_at",
+                "acknowledgement_comment",
+                "resolved_at",
+            ]
+        )
+        cls._create_validation_issue_snapshot(
+            validation_issue_id=int(issue.pk),
+            validation_run_id=int(validation_run.pk),
+            result=ReconcileValidationIssueSnapshotResultChoices.REOPENED,
+            evaluated_values_json={
+                "_validation_context": "reopened",
+                "value": issue.failed_value,
+                "acknowledged": False,
+                "reopened": True,
+            },
+            message=str(reason or "").strip(),
+            severity=str(issue.severity or "").strip(),
+            data_version=data_version,
+            created_at=now,
+            related_audit_event_id=None,
+        )
+        return {
+            "issue_id": int(issue.pk),
+            "page_state_id": int(page_state_id),
+            "status": issue.status,
+            "changed": True,
+        }
+
+    @staticmethod
+    def get_validation_issue_action_scope(*, issue_id: int) -> dict[str, object] | None:
+        row = ReconcileValidationIssue.objects.filter(pk=issue_id).values("id", "form_instance_id", "status").first()
+        if row is None:
+            return None
+        return {
+            "issue_id": int(row["id"]),
+            "page_state_id": int(row["form_instance_id"]),
+            "status": str(row["status"] or ""),
+        }
 
     @classmethod
     def list_active_validation_issues_by_page_state_and_field_templates(
@@ -544,10 +626,7 @@ class DjangoReconcileDataQueryWriteRepository:
                 form_instance_id=page_state_id,
                 status__in=cls.ACTIVE_VALIDATION_ISSUE_STATUSES,
             )
-            .filter(
-                Q(field_instance__field_template_id__in=field_template_ids)
-                | Q(field_instance_id__isnull=True, rule__field_template_id__in=field_template_ids)
-            )
+            .filter(Q(field_instance__field_template_id__in=field_template_ids) | Q(field_instance_id__isnull=True, rule__field_template_id__in=field_template_ids))
             .values(
                 "id",
                 "rule_id",
@@ -620,11 +699,7 @@ class DjangoReconcileDataQueryWriteRepository:
         )
         field_path = str(entry_context.get("field_path") or "").strip()
         if field_path:
-            field_paths = [
-                str(path or "").strip()
-                for path in entry_context.get("field_path_candidates", (field_path,))
-                if str(path or "").strip()
-            ]
+            field_paths = [str(path or "").strip() for path in entry_context.get("field_path_candidates", (field_path,)) if str(path or "").strip()]
             queryset = queryset.filter(field_path__in=field_paths or [field_path])
         return queryset.exists()
 
@@ -778,22 +853,19 @@ class DjangoReconcileDataQueryWriteRepository:
         actor_user_id: int | None,
         now: datetime,
     ) -> bool:
-        updated = (
-            ReconcileDataQuery.objects.filter(
-                pk=dataquery_id,
-                page_state_id=page_state_id,
-                field_template_id=field_template_id,
-                deleted=False,
-                status=ReconcileDataQueryStatusChoices.ANSWERED,
-            )
-            .update(
-                status=ReconcileDataQueryStatusChoices.RESOLVED,
-                resolution_note=resolution_note[:1000],
-                resolved_at=now,
-                resolved_by_id=actor_user_id,
-                updated_at=now,
-                updated_by_id=actor_user_id,
-            )
+        updated = ReconcileDataQuery.objects.filter(
+            pk=dataquery_id,
+            page_state_id=page_state_id,
+            field_template_id=field_template_id,
+            deleted=False,
+            status=ReconcileDataQueryStatusChoices.ANSWERED,
+        ).update(
+            status=ReconcileDataQueryStatusChoices.RESOLVED,
+            resolution_note=resolution_note[:1000],
+            resolved_at=now,
+            resolved_by_id=actor_user_id,
+            updated_at=now,
+            updated_by_id=actor_user_id,
         )
         return updated > 0
 
@@ -806,20 +878,18 @@ class DjangoReconcileDataQueryWriteRepository:
         actor_user_id: int | None,
         now: datetime,
     ) -> bool:
-        updated = (
-            ReconcileDataQuery.objects.filter(
-                pk=dataquery_id,
-                page_state_id=page_state_id,
-                field_template_id=field_template_id,
-                deleted=False,
-                status=ReconcileDataQueryStatusChoices.RESOLVED,
-            ).update(
-                status=ReconcileDataQueryStatusChoices.CLOSED,
-                closed_at=now,
-                closed_by_id=actor_user_id,
-                updated_at=now,
-                updated_by_id=actor_user_id,
-            )
+        updated = ReconcileDataQuery.objects.filter(
+            pk=dataquery_id,
+            page_state_id=page_state_id,
+            field_template_id=field_template_id,
+            deleted=False,
+            status=ReconcileDataQueryStatusChoices.RESOLVED,
+        ).update(
+            status=ReconcileDataQueryStatusChoices.CLOSED,
+            closed_at=now,
+            closed_by_id=actor_user_id,
+            updated_at=now,
+            updated_by_id=actor_user_id,
         )
         return updated > 0
 
@@ -832,25 +902,23 @@ class DjangoReconcileDataQueryWriteRepository:
         actor_user_id: int | None,
         now: datetime,
     ) -> bool:
-        updated = (
-            ReconcileDataQuery.objects.filter(
-                pk=dataquery_id,
-                page_state_id=page_state_id,
-                field_template_id=field_template_id,
-                deleted=False,
-                status__in=(
-                    ReconcileDataQueryStatusChoices.RESOLVED,
-                    ReconcileDataQueryStatusChoices.CLOSED,
-                ),
-            ).update(
-                status=ReconcileDataQueryStatusChoices.OPEN,
-                resolved_at=None,
-                resolved_by_id=None,
-                closed_at=None,
-                closed_by_id=None,
-                updated_at=now,
-                updated_by_id=actor_user_id,
-            )
+        updated = ReconcileDataQuery.objects.filter(
+            pk=dataquery_id,
+            page_state_id=page_state_id,
+            field_template_id=field_template_id,
+            deleted=False,
+            status__in=(
+                ReconcileDataQueryStatusChoices.RESOLVED,
+                ReconcileDataQueryStatusChoices.CLOSED,
+            ),
+        ).update(
+            status=ReconcileDataQueryStatusChoices.OPEN,
+            resolved_at=None,
+            resolved_by_id=None,
+            closed_at=None,
+            closed_by_id=None,
+            updated_at=now,
+            updated_by_id=actor_user_id,
         )
         return updated > 0
 
@@ -863,20 +931,18 @@ class DjangoReconcileDataQueryWriteRepository:
         actor_user_id: int | None,
         now: datetime,
     ) -> bool:
-        updated = (
-            ReconcileDataQuery.objects.filter(
-                pk=dataquery_id,
-                page_state_id=page_state_id,
-                field_template_id=field_template_id,
-                deleted=False,
-                status=ReconcileDataQueryStatusChoices.ANSWERED,
-            ).update(
-                status=ReconcileDataQueryStatusChoices.OPEN,
-                answered_at=None,
-                answered_by_id=None,
-                updated_at=now,
-                updated_by_id=actor_user_id,
-            )
+        updated = ReconcileDataQuery.objects.filter(
+            pk=dataquery_id,
+            page_state_id=page_state_id,
+            field_template_id=field_template_id,
+            deleted=False,
+            status=ReconcileDataQueryStatusChoices.ANSWERED,
+        ).update(
+            status=ReconcileDataQueryStatusChoices.OPEN,
+            answered_at=None,
+            answered_by_id=None,
+            updated_at=now,
+            updated_by_id=actor_user_id,
         )
         return updated > 0
 
@@ -889,24 +955,21 @@ class DjangoReconcileDataQueryWriteRepository:
         actor_user_id: int | None,
         now: datetime,
     ) -> bool:
-        updated = (
-            ReconcileDataQuery.objects.filter(
-                pk=dataquery_id,
-                page_state_id=page_state_id,
-                field_template_id=field_template_id,
-                deleted=False,
-                status__in=(
-                    ReconcileDataQueryStatusChoices.OPEN,
-                    ReconcileDataQueryStatusChoices.ANSWERED,
-                ),
-            )
-            .update(
-                status=ReconcileDataQueryStatusChoices.ANSWERED,
-                answered_at=now,
-                answered_by_id=actor_user_id,
-                updated_at=now,
-                updated_by_id=actor_user_id,
-            )
+        updated = ReconcileDataQuery.objects.filter(
+            pk=dataquery_id,
+            page_state_id=page_state_id,
+            field_template_id=field_template_id,
+            deleted=False,
+            status__in=(
+                ReconcileDataQueryStatusChoices.OPEN,
+                ReconcileDataQueryStatusChoices.ANSWERED,
+            ),
+        ).update(
+            status=ReconcileDataQueryStatusChoices.ANSWERED,
+            answered_at=now,
+            answered_by_id=actor_user_id,
+            updated_at=now,
+            updated_by_id=actor_user_id,
         )
         return updated > 0
 
@@ -946,11 +1009,7 @@ class DjangoReconcileDataQueryWriteRepository:
 
     @staticmethod
     def get_query_action_scope(*, dataquery_id: int) -> dict[str, object] | None:
-        row = (
-            ReconcileDataQuery.objects.filter(pk=dataquery_id, deleted=False)
-            .values("id", "page_state_id", "field_template_id", "status")
-            .first()
-        )
+        row = ReconcileDataQuery.objects.filter(pk=dataquery_id, deleted=False).values("id", "page_state_id", "field_template_id", "status").first()
         if row is None:
             return None
         return {
@@ -964,12 +1023,16 @@ class DjangoReconcileDataQueryWriteRepository:
     def user_can_respond_to_query(*, dataquery_id: int, actor_user_id: int | None) -> bool:
         if actor_user_id is None:
             return False
-        return ReconcileDataQuery.objects.filter(
-            pk=dataquery_id,
-            deleted=False,
-        ).filter(
-            Q(opened_by_id=actor_user_id) | Q(assigned_to_id=actor_user_id),
-        ).exists()
+        return (
+            ReconcileDataQuery.objects.filter(
+                pk=dataquery_id,
+                deleted=False,
+            )
+            .filter(
+                Q(opened_by_id=actor_user_id) | Q(assigned_to_id=actor_user_id),
+            )
+            .exists()
+        )
 
     @classmethod
     def _current_page_entry_query_context(
@@ -1072,11 +1135,7 @@ class DjangoReconcileDataQueryWriteRepository:
             if storage_key in payload:
                 return cls._format_value_snapshot(payload.get(storage_key)), storage_key
         for storage_key in storage_keys:
-            part_map = {
-                f"{storage_key}{suffix}": payload.get(f"{storage_key}{suffix}")
-                for suffix in _DATE_PART_SUFFIXES
-                if f"{storage_key}{suffix}" in payload
-            }
+            part_map = {f"{storage_key}{suffix}": payload.get(f"{storage_key}{suffix}") for suffix in _DATE_PART_SUFFIXES if f"{storage_key}{suffix}" in payload}
             if part_map:
                 return json.dumps(part_map, ensure_ascii=False, sort_keys=True), storage_key
         fallback_key = storage_key_hint or field_key or f"field_{field_template_id}"

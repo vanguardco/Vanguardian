@@ -43,6 +43,12 @@
       placeholder: 'Reopen reason',
       required: true,
     },
+    reopen_validation_issue: {
+      title: 'Reopen Validation Issue',
+      message: 'Enter the reason for reopening this validation issue.',
+      placeholder: 'Reopen reason',
+      required: true,
+    },
     cancel: {
       title: 'Cancel Query',
       message: 'Enter the reason for cancelling this query.',

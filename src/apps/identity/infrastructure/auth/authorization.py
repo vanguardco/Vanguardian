@@ -34,8 +34,10 @@ MUTATING_PERMISSION_PREFIXES = (
     "QUERY.RESPOND",
     "QUERY.CLOSE",
     "QUERY.RETURN",
+    "QUERY.REOPEN",
     "QUERY.CANCEL",
     "VALIDATION_ISSUE.ACKNOWLEDGE",
+    "VALIDATION_ISSUE.REOPEN",
     "EVENT_REVIEW.COMPLETE",
     "EVENT_CERTIFICATION.CERTIFY",
     "EVENT_ATTESTATION.REVOKE",
@@ -58,6 +60,7 @@ DELEGATION_TASK_BY_PERMISSION = {
     "CASEBOOK.SIGN": "CASEBOOK_SIGN",
     "SUBJECT.RANDOMIZE": "RANDOMIZATION",
 }
+
 
 @dataclass(frozen=True)
 class ResourceContext:
@@ -189,19 +192,25 @@ class EffectivePermissionResolver:
         )
 
     def has_active_study_membership(self, *, user_id: int, study_id: int):
-        return self._active_study_membership(
-            user_id=user_id,
-            study_id=study_id,
-            now=timezone.now(),
-        ) is not None
+        return (
+            self._active_study_membership(
+                user_id=user_id,
+                study_id=study_id,
+                now=timezone.now(),
+            )
+            is not None
+        )
 
     def has_active_site_membership(self, *, user_id: int, study_id: int, study_site_id: int):
-        return self._active_site_membership(
-            user_id=user_id,
-            study_id=study_id,
-            study_site_id=study_site_id,
-            now=timezone.now(),
-        ) is not None
+        return (
+            self._active_site_membership(
+                user_id=user_id,
+                study_id=study_id,
+                study_site_id=study_site_id,
+                now=timezone.now(),
+            )
+            is not None
+        )
 
     def _active_study_membership(self, *, user_id: int, study_id: int, now: datetime):
         return (
@@ -341,10 +350,7 @@ class DelegationPolicy:
 
     def _configured_task(self, permission_code, task_code):
         queryset = DelegationTask.objects.filter(is_active=True)
-        return (
-            queryset.filter(required_permission_code=permission_code).first()
-            or (queryset.filter(code=task_code).first() if task_code else None)
-        )
+        return queryset.filter(required_permission_code=permission_code).first() or (queryset.filter(code=task_code).first() if task_code else None)
 
     def _has_active_delegation(self, *, user_id: int, study_site_id: int, task_code: str):
         now = timezone.now()
@@ -354,16 +360,21 @@ class DelegationPolicy:
             task_code=task_code,
             status="ACTIVE",
         )
-        return queryset.filter(valid_from__isnull=True, valid_to__isnull=True).exists() or queryset.filter(
-            valid_from__lte=now,
-            valid_to__isnull=True,
-        ).exists() or queryset.filter(
-            valid_from__isnull=True,
-            valid_to__gt=now,
-        ).exists() or queryset.filter(
-            valid_from__lte=now,
-            valid_to__gt=now,
-        ).exists()
+        return (
+            queryset.filter(valid_from__isnull=True, valid_to__isnull=True).exists()
+            or queryset.filter(
+                valid_from__lte=now,
+                valid_to__isnull=True,
+            ).exists()
+            or queryset.filter(
+                valid_from__isnull=True,
+                valid_to__gt=now,
+            ).exists()
+            or queryset.filter(
+                valid_from__lte=now,
+                valid_to__gt=now,
+            ).exists()
+        )
 
 
 class TrainingPolicy:
@@ -387,16 +398,21 @@ class TrainingPolicy:
 
     def _has_current_completion(self, *, user_id: int, study_id: int, training_code: str):
         now = timezone.now()
-        return TrainingCompletion.objects.filter(
-            user_id=user_id,
-            study_id=study_id,
-            training_code=training_code,
-        ).filter(expires_at__isnull=True).exists() or TrainingCompletion.objects.filter(
-            user_id=user_id,
-            study_id=study_id,
-            training_code=training_code,
-            expires_at__gt=now,
-        ).exists()
+        return (
+            TrainingCompletion.objects.filter(
+                user_id=user_id,
+                study_id=study_id,
+                training_code=training_code,
+            )
+            .filter(expires_at__isnull=True)
+            .exists()
+            or TrainingCompletion.objects.filter(
+                user_id=user_id,
+                study_id=study_id,
+                training_code=training_code,
+                expires_at__gt=now,
+            ).exists()
+        )
 
 
 class AuditWriter:

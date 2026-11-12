@@ -57,6 +57,7 @@
 <span hidden data-validation-issue-history-source>
     {% for history in field.validation_issue_histories %}
         <span data-validation-issue-history
+              data-history-validation-issue-id="{{ history.validation_issue_id|default:'' }}"
               data-history-dataquery-id="{{ history.dataquery_id|default:'' }}"
               data-history-status="{{ history.status|default:''|escape }}"
               data-history-label="{{ history.label|escape }}"

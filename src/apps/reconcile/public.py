@@ -89,6 +89,20 @@ def acknowledge_reconcile_validation_issues(
     )
 
 
+@transaction.atomic
+def reopen_reconcile_validation_issue(
+    *,
+    issue_id: int,
+    reason: str,
+    actor_user_id: int | None,
+) -> dict[str, object]:
+    return ReconcileDataQueryWriteService().reopen_validation_issue(
+        issue_id=issue_id,
+        reason=reason,
+        actor_user_id=actor_user_id,
+    )
+
+
 def open_reconcile_query(
     *,
     page_state_id: int,
@@ -291,6 +305,7 @@ __all__ = [
     "open_reconcile_query",
     "reopen_reconcile_query",
     "request_clarification_reconcile_query",
+    "reopen_reconcile_validation_issue",
     "resolve_reconcile_query",
     "reply_to_reconcile_query",
     "summarize_reconcile_workbench_for_page_states",

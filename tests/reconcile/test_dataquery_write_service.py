@@ -8,6 +8,7 @@ from apps.reconcile.infrastructure.repositories.dataquery_write import DjangoRec
 from apps.reconcile.models import (
     ReconcileDataQueryStatusChoices,
     ReconcileQueryThreadSourceChoices,
+    ReconcileValidationIssueSnapshotResultChoices,
     ReconcileValidationIssueStatusChoices,
     ReconcileValidationRunSourceChoices,
 )
@@ -68,7 +69,7 @@ class ReconcileDataQueryWriteServiceTests(SimpleTestCase):
                     "message_type": "comment",
                     "actor_user_id": 99,
                     "source": ReconcileQueryThreadSourceChoices.SYSTEM,
-                }
+                },
             ],
         )
 
@@ -299,6 +300,43 @@ class ReconcileDataQueryWriteServiceTests(SimpleTestCase):
         self.assertEqual(repository.acknowledged_validation_issues[0]["page_state_id"], 11)
         self.assertEqual(repository.acknowledged_validation_issues[0]["validation_run_id"], 8801)
         self.assertEqual(repository.acknowledged_validation_issues[0]["items"], [{"issue_id": 701, "comment": "Reviewed warning."}])
+
+    def test_reopen_validation_issue_requires_reason(self):
+        repository = _ReconcileRepositoryStub()
+
+        with self.assertRaisesMessage(ValueError, "Reopen reason is required."):
+            ReconcileDataQueryWriteService(repository=repository).reopen_validation_issue(
+                issue_id=701,
+                reason=" ",
+                actor_user_id=99,
+            )
+
+        self.assertEqual(repository.reopened_validation_issues, [])
+
+    def test_reopen_validation_issue_uses_issue_scope(self):
+        repository = _ReconcileRepositoryStub()
+
+        result = ReconcileDataQueryWriteService(repository=repository).reopen_validation_issue(
+            issue_id=701,
+            reason="Please provide another response.",
+            actor_user_id=99,
+        )
+
+        self.assertEqual(
+            result,
+            {
+                "issue_id": 701,
+                "page_state_id": 11,
+                "status": ReconcileValidationIssueStatusChoices.ACKNOWLEDGEMENT_REQUIRED,
+                "changed": True,
+            },
+        )
+        self.assertEqual(repository.validation_issue_scope_calls, [{"issue_id": 701}])
+        self.assertEqual(repository.reopened_validation_issues[0]["page_state_id"], 11)
+        self.assertEqual(
+            repository.reopened_validation_issues[0]["reason"],
+            "Please provide another response.",
+        )
 
     def test_correct_resolved_validation_issues_marks_changed_valid_fields_corrected(self):
         repository = _ReconcileRepositoryStub()
@@ -816,12 +854,15 @@ class ReconcileDataQueryWriteRepositoryTests(SimpleTestCase):
             message="Please acknowledge.",
             data_version=5,
         )
-        with patch(
-            "apps.reconcile.infrastructure.repositories.dataquery_write.ReconcileValidationIssue.objects.select_related",
-            return_value=_SelectRelatedQuery(issue),
-        ), patch(
-            "apps.reconcile.infrastructure.repositories.dataquery_write.ReconcileValidationIssueSnapshot.objects.create",
-        ) as create_snapshot:
+        with (
+            patch(
+                "apps.reconcile.infrastructure.repositories.dataquery_write.ReconcileValidationIssue.objects.select_related",
+                return_value=_SelectRelatedQuery(issue),
+            ),
+            patch(
+                "apps.reconcile.infrastructure.repositories.dataquery_write.ReconcileValidationIssueSnapshot.objects.create",
+            ) as create_snapshot,
+        ):
             acknowledged_ids = repository.acknowledge_validation_issues(
                 page_state_id=23,
                 items=[{"issue_id": 701, "comment": "Reviewed warning."}],
@@ -858,6 +899,90 @@ class ReconcileDataQueryWriteRepositoryTests(SimpleTestCase):
             related_audit_event_id=None,
         )
 
+    def test_reopen_validation_issue_reactivates_issue_and_records_reopen_snapshot(self):
+        repository = DjangoReconcileDataQueryWriteRepository()
+        issue = _IssueRecord(
+            pk=701,
+            failed_value="2.72",
+            severity="MAJOR",
+            message="Outside range",
+            data_version=2,
+        )
+        issue.status = ReconcileValidationIssueStatusChoices.ACKNOWLEDGED
+        issue.acknowledged_by = 23
+        issue.acknowledged_at = "earlier"
+        issue.acknowledgement_comment = "Reviewed"
+        issue.resolved_at = "earlier"
+        with (
+            patch(
+                "apps.reconcile.infrastructure.repositories.dataquery_write.ReconcileValidationIssue.objects.select_related",
+                return_value=_SelectRelatedQuery(issue),
+            ) as select_related,
+            patch(
+                "apps.reconcile.infrastructure.repositories.dataquery_write.DjangoReconcileDataQueryWriteRepository.create_validation_run",
+                return_value=SimpleNamespace(pk=9901),
+            ) as create_validation_run,
+            patch(
+                "apps.reconcile.infrastructure.repositories.dataquery_write.DjangoReconcileDataQueryWriteRepository._create_validation_issue_snapshot",
+            ) as create_snapshot,
+        ):
+            result = repository.reopen_validation_issue(
+                issue_id=701,
+                page_state_id=23,
+                reason="Please answer again.",
+                actor_user_id=23,
+                now="now",
+            )
+
+        self.assertEqual(
+            result,
+            {
+                "issue_id": 701,
+                "page_state_id": 23,
+                "status": ReconcileValidationIssueStatusChoices.ACKNOWLEDGEMENT_REQUIRED,
+                "changed": True,
+            },
+        )
+        select_related.assert_called_once_with("form_instance")
+        create_validation_run.assert_called_once_with(
+            page_state_id=23,
+            source=ReconcileValidationRunSourceChoices.VALIDATION_ISSUE_REOPEN,
+            data_version=2,
+            actor_user_id=23,
+            now="now",
+        )
+        self.assertEqual(issue.status, ReconcileValidationIssueStatusChoices.ACKNOWLEDGEMENT_REQUIRED)
+        self.assertIsNone(issue.acknowledged_by)
+        self.assertIsNone(issue.acknowledged_at)
+        self.assertIsNone(issue.acknowledgement_comment)
+        self.assertIsNone(issue.resolved_at)
+        self.assertEqual(
+            issue.saved_update_fields,
+            [
+                "status",
+                "acknowledged_by",
+                "acknowledged_at",
+                "acknowledgement_comment",
+                "resolved_at",
+            ],
+        )
+        create_snapshot.assert_called_once_with(
+            validation_issue_id=701,
+            validation_run_id=9901,
+            result=ReconcileValidationIssueSnapshotResultChoices.REOPENED,
+            evaluated_values_json={
+                "_validation_context": "reopened",
+                "value": "2.72",
+                "acknowledged": False,
+                "reopened": True,
+            },
+            message="Please answer again.",
+            severity="MAJOR",
+            data_version=2,
+            created_at="now",
+            related_audit_event_id=None,
+        )
+
     def test_mark_validation_issue_corrected_sets_corrected_status_and_comment(self):
         repository = DjangoReconcileDataQueryWriteRepository()
         issue = _UpdateQuery()
@@ -888,6 +1013,8 @@ class _ReconcileRepositoryStub:
         self.created_validation_queries = []
         self.created_validation_runs = []
         self.acknowledged_validation_issues = []
+        self.reopened_validation_issues = []
+        self.validation_issue_scope_calls = []
         self.corrected_validation_issues = []
         self.answered_calls = []
 
@@ -960,6 +1087,23 @@ class _ReconcileRepositoryStub:
     def acknowledge_validation_issues(self, **kwargs):
         self.acknowledged_validation_issues.append(kwargs)
         return [int(item["issue_id"]) for item in kwargs["items"]]
+
+    def get_validation_issue_action_scope(self, **kwargs):
+        self.validation_issue_scope_calls.append(kwargs)
+        return {
+            "issue_id": int(kwargs["issue_id"]),
+            "page_state_id": 11,
+            "status": ReconcileValidationIssueStatusChoices.ACKNOWLEDGED,
+        }
+
+    def reopen_validation_issue(self, **kwargs):
+        self.reopened_validation_issues.append(kwargs)
+        return {
+            "issue_id": kwargs["issue_id"],
+            "page_state_id": kwargs["page_state_id"],
+            "status": ReconcileValidationIssueStatusChoices.ACKNOWLEDGEMENT_REQUIRED,
+            "changed": True,
+        }
 
     def list_active_validation_issues_by_page_state_and_field_templates(self, **kwargs):
         return [{"id": 701, "rule_id": 201, "field_template_id": 1, "failed_value": "8"}]
