@@ -97,7 +97,7 @@ jobs:
 
             console.log(`Dispatching Infrastructure workflow_id=${workflow_id}, ref=${dispatchRef}, environment=${environment}, tag=${tag}`);
             await github.rest.actions.createWorkflowDispatch({
-              owner: 'vclinical',
+              owner: 'vanguardco',
               repo: 'Infrastructure',
               workflow_id,
               ref: dispatchRef,
