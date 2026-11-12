@@ -1,0 +1,16 @@
+{% load i18n %}
+<div class="query-workbench__issue-actions">
+    {% if record.review_focus_url %}
+        <a href="{{ record.review_focus_url }}"
+           class="entity-table__footer-button entity-table__footer-button--secondary">{% trans "Review" %}</a>
+    {% endif %}
+    {% if can_reopen_validation_issue and record.status == "ACKNOWLEDGED" %}
+        {% url 'reconcile_api:validation_issue_action' study_id=record.study_id issue_id=record.issue_id action='reopen' as reopen_url %}
+        <button type="button"
+                class="entity-table__footer-button entity-table__footer-button--primary"
+                data-query-action-trigger
+                data-query-action="reopen_validation_issue"
+                data-query-action-url="{{ reopen_url }}"
+                data-query-label="VI-{{ record.issue_id }}">{% trans "Reopen" %}</button>
+    {% endif %}
+</div>

@@ -38,6 +38,13 @@
   margin: 0;
 }
 
+.query-workbench__issue-actions {
+  display: flex;
+  min-width: max-content;
+  align-items: center;
+  gap: 6px;
+}
+
 .query-detail {
   gap: 0.5rem;
   padding: 1rem;

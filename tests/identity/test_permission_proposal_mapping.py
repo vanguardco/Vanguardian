@@ -26,6 +26,7 @@ from apps.identity.presentation.web.views.users import (
     IdentityUserRestoreView,
     IdentityUsersView,
 )
+from apps.reconcile.presentation.api.views import ValidationIssueLifecycleActionAPIView
 from apps.study.presentation.web.views.crf_templates import (
     StudyCrfSectionLayoutConfigImportTemplateView,
     StudyCrfTemplateFieldImportTemplateView,
@@ -119,6 +120,7 @@ class PermissionProposalMappingTests(SimpleTestCase):
             ),
             DataCaptureEventAttestationRevokeAPIView: "EVENT_ATTESTATION.REVOKE",
             SubjectValidationIssueAcknowledgeView: "VALIDATION_ISSUE.ACKNOWLEDGE",
+            ValidationIssueLifecycleActionAPIView: "reconcile.view_dataquery",
             StudyRolesContextMixin: "USER_ACCESS.VIEW",
             StudyRoleCreateView: "USER_ACCESS.MANAGE",
             StudyCrfPageLifecycleConfigView: "STUDY_CONFIG.MANAGE",
@@ -174,14 +176,8 @@ class PermissionProposalMappingTests(SimpleTestCase):
             StudyCrfTemplateListView.dispatch_authenticated = original_dispatch_authenticated
 
     def test_route_permissions_are_registered_in_permission_registry(self):
-        permission_codes = {
-            definition.permission_code
-            for definition in ALL_PERMISSION_DEFINITIONS
-        }
-        permission_codes.update(
-            f"{definition.app_label}.{definition.codename}"
-            for definition in ALL_PERMISSION_DEFINITIONS
-        )
+        permission_codes = {definition.permission_code for definition in ALL_PERMISSION_DEFINITIONS}
+        permission_codes.update(f"{definition.app_label}.{definition.codename}" for definition in ALL_PERMISSION_DEFINITIONS)
         missing_permissions = []
 
         for _, pattern in _flatten_url_patterns(get_resolver().url_patterns):
@@ -197,10 +193,7 @@ class PermissionProposalMappingTests(SimpleTestCase):
         for route, pattern in _flatten_url_patterns(get_resolver().url_patterns):
             view_class = _route_view_class(pattern)
             module_name = getattr(view_class, "__module__", getattr(pattern.callback, "__module__", ""))
-            if not (
-                module_name.startswith("apps.")
-                or module_name.startswith("Vanguardian")
-            ):
+            if not (module_name.startswith("apps.") or module_name.startswith("Vanguardian")):
                 continue
             if not _permission_list(_route_permission(pattern)):
                 routes_without_permissions.add(route)

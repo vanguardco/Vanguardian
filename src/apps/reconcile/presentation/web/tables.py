@@ -89,13 +89,29 @@ class ValidationIssueWorkbenchTable(tables.Table):
     subject = tables.Column(empty_values=(), verbose_name=_("Subject"), orderable=False)
     visit = tables.Column(empty_values=(), verbose_name=_("Visit/Event"), orderable=False)
     crf_page_label = tables.Column(verbose_name=_("CRF Page"), orderable=False)
+    field_label = tables.Column(verbose_name=_("Field"), orderable=False)
     message = tables.Column(verbose_name=_("Message"), orderable=False)
     failed_value = tables.Column(verbose_name=_("Failed Value"), orderable=False)
     created_at = tables.Column(verbose_name=_("Opened"))
+    acknowledged_by_display = tables.Column(verbose_name=_("Acknowledged By"), orderable=False)
+    acknowledged_at = tables.Column(verbose_name=_("Acknowledged"), orderable=False)
+    actions = tables.TemplateColumn(
+        template_name="reconcile/includes/validation_issue_workbench_actions_cell.html",
+        verbose_name=_("Actions"),
+        empty_values=(),
+        orderable=False,
+        attrs={"td": {"class": "entity-table__actions"}},
+    )
 
     @staticmethod
-    def render_issue_id(value):
-        return f"VI-{value}"
+    def render_issue_id(value, record):
+        if not record.review_focus_url:
+            return f"VI-{value}"
+        return format_html('<a href="{}">VI-{}</a>', record.review_focus_url, value)
+
+    @staticmethod
+    def render_status(value):
+        return str(value or "—").replace("_", " ").title()
 
     @staticmethod
     def render_subject(record):
@@ -113,6 +129,10 @@ class ValidationIssueWorkbenchTable(tables.Table):
     def render_created_at(value):
         return date_format(value, "DATETIME_FORMAT") if value else "—"
 
+    @staticmethod
+    def render_acknowledged_at(value):
+        return date_format(value, "DATETIME_FORMAT") if value else "—"
+
     class Meta:
         attrs = {"class": "entity-table"}
         fields = (
@@ -122,9 +142,13 @@ class ValidationIssueWorkbenchTable(tables.Table):
             "subject",
             "visit",
             "crf_page_label",
+            "field_label",
             "message",
             "failed_value",
             "created_at",
+            "acknowledged_by_display",
+            "acknowledged_at",
+            "actions",
         )
 
 

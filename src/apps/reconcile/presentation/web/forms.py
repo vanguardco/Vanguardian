@@ -19,14 +19,17 @@ SOURCE_CHOICES = (
     ("manual", _("Manual")),
     ("system", _("System")),
     ("import", _("Import")),
+    ("validation_issues", _("Validation Issues")),
 )
+
+
 class QueryWorkbenchFilterForm(forms.Form):
     search = forms.CharField(
         required=False,
         label=_("Search"),
         widget=ToolbarSearchInputWidget(
-            attrs={"placeholder": _("Search queries...")},
-            aria_label=_("Search data queries"),
+            attrs={"placeholder": _("Search subject, screening or randomization code...")},
+            aria_label=_("Search by subject, screening or randomization code"),
         ),
     )
     status = forms.ChoiceField(

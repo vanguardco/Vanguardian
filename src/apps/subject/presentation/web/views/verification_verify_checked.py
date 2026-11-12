@@ -49,7 +49,7 @@ QUERY_ACTION_PERMISSION_BY_ACTION = {
     "request_clarification": "QUERY.RETURN",
     "resolve": "QUERY.CLOSE",
     "close": "QUERY.CLOSE",
-    "reopen": "QUERY.RETURN",
+    "reopen": "QUERY.REOPEN",
     "cancel": "QUERY.CANCEL",
 }
 
@@ -117,11 +117,7 @@ def _load_entry_payload_map(raw_payload) -> dict:
 
 
 def _field_display_key(field_row: dict, field_template_id: int) -> str:
-    return (
-        str(field_row.get("field_key") or "").strip()
-        or str(field_row.get("brief_description") or "").strip()
-        or f"field_{field_template_id}"
-    )
+    return str(field_row.get("field_key") or "").strip() or str(field_row.get("brief_description") or "").strip() or f"field_{field_template_id}"
 
 
 def _field_value_marker(*, payload: dict, field_row: dict, field_template_id: int) -> str:
@@ -254,32 +250,26 @@ class SubjectFormVerificationVerifyCheckedView(
 
     def post(self, request, *args, **kwargs):
         try:
-            normalized = SubjectFormVerificationRequestValidator.parse_verify_checked_payload(
-                request.body
-            )
+            normalized = SubjectFormVerificationRequestValidator.parse_verify_checked_payload(request.body)
             subject_id = int(kwargs["subject_id"])
             visit_id = int(kwargs["visit_id"])
             crf_template_id = int(kwargs["crf_template_id"])
             event_form_binding_id = _event_form_binding_id_from_request(request)
-            context_is_reviewable, current_page_status, submitted_entry = (
-                _review_context_status_and_submitted_entry(
-                    subject_id=subject_id,
-                    visit_id=visit_id,
-                    crf_template_id=crf_template_id,
-                    event_form_binding_id=event_form_binding_id,
-                )
+            context_is_reviewable, current_page_status, submitted_entry = _review_context_status_and_submitted_entry(
+                subject_id=subject_id,
+                visit_id=visit_id,
+                crf_template_id=crf_template_id,
+                event_form_binding_id=event_form_binding_id,
             )
             if not context_is_reviewable:
                 return JsonResponse({"error": [STALE_REVIEW_ERROR]}, status=400)
-            context_can_continue, checked_field_template_ids, stale_review_fields, reload_required = (
-                _filter_changed_review_fields(
-                    subject_id=subject_id,
-                    visit_id=visit_id,
-                    crf_template_id=crf_template_id,
-                    normalized_payload=normalized,
-                    submitted_entry=submitted_entry,
-                    event_form_binding_id=event_form_binding_id,
-                )
+            context_can_continue, checked_field_template_ids, stale_review_fields, reload_required = _filter_changed_review_fields(
+                subject_id=subject_id,
+                visit_id=visit_id,
+                crf_template_id=crf_template_id,
+                normalized_payload=normalized,
+                submitted_entry=submitted_entry,
+                event_form_binding_id=event_form_binding_id,
             )
             if not context_can_continue:
                 return JsonResponse({"error": [STALE_REVIEW_ERROR]}, status=400)
@@ -340,9 +330,7 @@ class SubjectFormVerificationReopenView(
 
     def post(self, request, *args, **kwargs):
         try:
-            reason_text = SubjectFormVerificationRequestValidator.parse_reopen_reason_text(
-                request.body
-            )
+            reason_text = SubjectFormVerificationRequestValidator.parse_reopen_reason_text(request.body)
             page_status = reopen_verified_form_verification_page_state(
                 subject_id=int(kwargs["subject_id"]),
                 visit_id=int(kwargs["visit_id"]),
@@ -477,9 +465,7 @@ class SubjectFormVerificationQueryThreadView(
 
     def post(self, request, *args, **kwargs):
         try:
-            normalized = SubjectFormVerificationRequestValidator.parse_query_thread_action(
-                request.body
-            )
+            normalized = SubjectFormVerificationRequestValidator.parse_query_thread_action(request.body)
             page_state_id = get_page_state_id_for_subject_visit_crf(
                 subject_id=int(kwargs["subject_id"]),
                 visit_id=int(kwargs["visit_id"]),
@@ -587,9 +573,7 @@ class SubjectFormVerificationOpenQueryView(
 
     def post(self, request, *args, **kwargs):
         try:
-            normalized = SubjectFormVerificationRequestValidator.parse_open_query_action(
-                request.body
-            )
+            normalized = SubjectFormVerificationRequestValidator.parse_open_query_action(request.body)
             page_state_id = get_page_state_id_for_subject_visit_crf(
                 subject_id=int(kwargs["subject_id"]),
                 visit_id=int(kwargs["visit_id"]),
@@ -648,9 +632,7 @@ class SubjectValidationIssueAcknowledgeView(
 
     def post(self, request, *args, **kwargs):
         try:
-            normalized = SubjectFormVerificationRequestValidator.parse_validation_issue_acknowledgements(
-                request.body
-            )
+            normalized = SubjectFormVerificationRequestValidator.parse_validation_issue_acknowledgements(request.body)
             page_state_id = get_page_state_id_for_subject_visit_crf(
                 subject_id=int(kwargs["subject_id"]),
                 visit_id=int(kwargs["visit_id"]),
@@ -664,7 +646,8 @@ class SubjectValidationIssueAcknowledgeView(
                 issues=normalized,
                 actor_user_id=getattr(request.user, "id", None),
                 current_failures=get_current_validation_failures_for_acknowledgement(
-                    subject_id=int(kwargs["subject_id"]), visit_id=int(kwargs["visit_id"]),
+                    subject_id=int(kwargs["subject_id"]),
+                    visit_id=int(kwargs["visit_id"]),
                     crf_template_id=int(kwargs["crf_template_id"]),
                     **_event_form_binding_kwargs_from_request(request),
                 ),

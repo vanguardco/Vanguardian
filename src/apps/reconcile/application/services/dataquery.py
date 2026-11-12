@@ -77,6 +77,7 @@ class ReconcileDataQueryWriteService:
         if isinstance(item, dict):
             getter = item.get
         else:
+
             def getter(key, default=None):
                 return getattr(item, key, default)
 
@@ -106,19 +107,11 @@ class ReconcileDataQueryWriteService:
         passed_rule_ids: set[int] | None = None,
     ) -> dict[str, int]:
         normalized_failures = [self._normalize_validation_failure(item) for item in failures]
-        validation_issue_failures = [
-            item for item in normalized_failures if item.mode in {"HARD", "SOFT"}
-        ]
+        validation_issue_failures = [item for item in normalized_failures if item.mode in {"HARD", "SOFT"}]
         query_failures = [item for item in normalized_failures if item.mode == "QUERY"]
         now: datetime = timezone.now()
-        normalized_evaluated_values_json = (
-            dict(evaluated_values_json) if isinstance(evaluated_values_json, dict) else {}
-        )
-        field_key_to_id = (
-            self.repository.list_field_key_to_id(crf_template_id=crf_template_id)
-            if crf_template_id is not None
-            else {}
-        )
+        normalized_evaluated_values_json = dict(evaluated_values_json) if isinstance(evaluated_values_json, dict) else {}
+        field_key_to_id = self.repository.list_field_key_to_id(crf_template_id=crf_template_id) if crf_template_id is not None else {}
         evaluated_values_by_field_template_id: dict[int, object] = {}
         for raw_field_key, value in normalized_evaluated_values_json.items():
             canonical_field_key = self._canonical_field_key(str(raw_field_key or ""))
@@ -198,25 +191,38 @@ class ReconcileDataQueryWriteService:
         }
 
     def reconcile_import_validation(
-        self, *, page_state_id, crf_template_id, entry_id, data_version,
-        failures, passed_rules, evaluated_values_json, actor_user_id,
+        self,
+        *,
+        page_state_id,
+        crf_template_id,
+        entry_id,
+        data_version,
+        failures,
+        passed_rules,
+        evaluated_values_json,
+        actor_user_id,
     ):
         from apps.audit.public import AuditContextAdapter
 
         audit = AuditContextAdapter()
         normalized = [self._normalize_validation_failure(item) for item in failures]
         audit_event = audit.record_event(
-            action="file_import_validation", object_type="page_state", object_id=str(page_state_id),
+            action="file_import_validation",
+            object_type="page_state",
+            object_id=str(page_state_id),
             actor_user_id=actor_user_id,
-            after_data={"entry_id": entry_id, "values": evaluated_values_json,
-                        "failures": [item.__dict__ for item in normalized], "passed_rules": passed_rules},
+            after_data={"entry_id": entry_id, "values": evaluated_values_json, "failures": [item.__dict__ for item in normalized], "passed_rules": passed_rules},
         )
         result = self.create_validation_failure_records(
-            page_state_id=page_state_id, crf_template_id=crf_template_id,
+            page_state_id=page_state_id,
+            crf_template_id=crf_template_id,
             failures=[item for item in normalized if item.mode != "QUERY"],
-            actor_user_id=actor_user_id, evaluated_values_json=evaluated_values_json,
-            data_version=data_version, related_audit_event_id=audit_event.pk,
-            source=ReconcileValidationRunSourceChoices.FILE_IMPORT, page_entry_id=entry_id,
+            actor_user_id=actor_user_id,
+            evaluated_values_json=evaluated_values_json,
+            data_version=data_version,
+            related_audit_event_id=audit_event.pk,
+            source=ReconcileValidationRunSourceChoices.FILE_IMPORT,
+            page_entry_id=entry_id,
             passed_rule_ids={item["rule_id"] for item in passed_rules},
         )
         active_queries = self.repository.list_active_system_validation_queries(page_state_id=page_state_id)
@@ -227,20 +233,31 @@ class ReconcileDataQueryWriteService:
             if failure.mode != "QUERY" or failure.field_template_id is None or signature in active_signatures:
                 continue
             query = self.repository.create_validation_open_query(
-                page_state_id=page_state_id, field_template_id=failure.field_template_id,
-                validation_rule_id=failure.rule_id, field_key=failure.field_key,
+                page_state_id=page_state_id,
+                field_template_id=failure.field_template_id,
+                validation_rule_id=failure.rule_id,
+                field_key=failure.field_key,
                 question_text=failure.message or "Validation rule failed.",
                 severity=self._normalize_query_severity(failure.severity),
-                actor_user_id=actor_user_id, now=now, page_entry_id=entry_id,
+                actor_user_id=actor_user_id,
+                now=now,
+                page_entry_id=entry_id,
             )
             self.repository.create_query_thread_message(
-                dataquery_id=query.pk, message_text=failure.message or "Validation rule failed.",
-                message_type=_QUERY_THREAD_COMMENT, actor_user_id=actor_user_id, now=now,
+                dataquery_id=query.pk,
+                message_text=failure.message or "Validation rule failed.",
+                message_type=_QUERY_THREAD_COMMENT,
+                actor_user_id=actor_user_id,
+                now=now,
                 source=_QUERY_THREAD_SOURCE_SYSTEM,
             )
-            audit.record_event(action="query_open", object_type="dataquery", object_id=str(query.pk),
-                actor_user_id=actor_user_id, after_data={"status": "open", "source": "file_import",
-                    "entry_id": entry_id, "rule_id": failure.rule_id, "value": failure.failed_value})
+            audit.record_event(
+                action="query_open",
+                object_type="dataquery",
+                object_id=str(query.pk),
+                actor_user_id=actor_user_id,
+                after_data={"status": "open", "source": "file_import", "entry_id": entry_id, "rule_id": failure.rule_id, "value": failure.failed_value},
+            )
             active_signatures.add(signature)
             result["query_count"] += 1
         passed_signatures = {(item["field_template_id"], item["rule_id"]) for item in passed_rules}
@@ -249,18 +266,29 @@ class ReconcileDataQueryWriteService:
             if (query["field_template_id"], query["validation_rule_id"]) not in passed_signatures:
                 continue
             if not self.repository.close_passing_system_validation_query(
-                dataquery_id=query["id"], page_state_id=page_state_id, actor_user_id=actor_user_id, now=now,
+                dataquery_id=query["id"],
+                page_state_id=page_state_id,
+                actor_user_id=actor_user_id,
+                now=now,
             ):
                 continue
             message = "Imported value passed the validation rule; system query closed."
             self.repository.create_query_thread_message(
-                dataquery_id=query["id"], message_text=message, message_type=_QUERY_THREAD_STATUS_CHANGE,
-                actor_user_id=actor_user_id, now=now, source=_QUERY_THREAD_SOURCE_SYSTEM,
+                dataquery_id=query["id"],
+                message_text=message,
+                message_type=_QUERY_THREAD_STATUS_CHANGE,
+                actor_user_id=actor_user_id,
+                now=now,
+                source=_QUERY_THREAD_SOURCE_SYSTEM,
             )
-            audit.record_event(action="query_close", object_type="dataquery", object_id=str(query["id"]),
-                actor_user_id=actor_user_id, before_data={"status": query["status"]},
-                after_data={"status": "closed", "source": "file_import", "entry_id": entry_id,
-                    "rule_id": query["validation_rule_id"], "values": evaluated_values_json})
+            audit.record_event(
+                action="query_close",
+                object_type="dataquery",
+                object_id=str(query["id"]),
+                actor_user_id=actor_user_id,
+                before_data={"status": query["status"]},
+                after_data={"status": "closed", "source": "file_import", "entry_id": entry_id, "rule_id": query["validation_rule_id"], "values": evaluated_values_json},
+            )
             result["closed_query_count"] += 1
         return result
 
@@ -301,13 +329,47 @@ class ReconcileDataQueryWriteService:
             actor_user_id=actor_user_id,
             now=now,
             validation_run_id=int(validation_run.pk),
-            **({"current_failures": [self._normalize_validation_failure(item).__dict__ for item in current_failures]}
-               if current_failures is not None else {}),
+            **({"current_failures": [self._normalize_validation_failure(item).__dict__ for item in current_failures]} if current_failures is not None else {}),
         )
         return {
             "acknowledged_issue_ids": acknowledged_issue_ids,
             "acknowledged_count": len(acknowledged_issue_ids),
         }
+
+    def reopen_validation_issue(
+        self,
+        *,
+        issue_id: int,
+        reason: str,
+        actor_user_id: int | None,
+    ) -> dict[str, object]:
+        normalized_reason = str(reason or "").strip()
+        if not normalized_reason:
+            raise ValueError("Reopen reason is required.")
+        scope = self.repository.get_validation_issue_action_scope(issue_id=issue_id)
+        if scope is None:
+            return {
+                "issue_id": issue_id,
+                "status": "",
+                "changed": False,
+            }
+        result = self.repository.reopen_validation_issue(
+            issue_id=issue_id,
+            page_state_id=int(scope["page_state_id"]),
+            reason=normalized_reason,
+            actor_user_id=actor_user_id,
+            now=timezone.now(),
+        )
+        if result is None:
+            return {
+                "issue_id": issue_id,
+                "status": str(scope.get("status") or ""),
+                "changed": False,
+            }
+        return result
+
+    def validation_issue_action_scope(self, *, issue_id: int) -> dict[str, object] | None:
+        return self.repository.get_validation_issue_action_scope(issue_id=issue_id)
 
     def correct_resolved_validation_issues(
         self,
@@ -363,14 +425,20 @@ class ReconcileDataQueryWriteService:
                 continue
             if rule_id is not None and (field_template_id, rule_id) in active_failure_signatures:
                 continue
-            old_value = self._format_thread_value(
-                issue.get("failed_value"),
-                field_contexts.get(field_template_id),
-            ) or "—"
-            new_value = self._format_thread_value(
-                field_id_to_value.get(field_template_id),
-                field_contexts.get(field_template_id),
-            ) or "—"
+            old_value = (
+                self._format_thread_value(
+                    issue.get("failed_value"),
+                    field_contexts.get(field_template_id),
+                )
+                or "—"
+            )
+            new_value = (
+                self._format_thread_value(
+                    field_id_to_value.get(field_template_id),
+                    field_contexts.get(field_template_id),
+                )
+                or "—"
+            )
             correction_comment = f"Cập nhật dữ liệu từ {old_value} thành {new_value}"
             corrected = self.repository.mark_validation_issue_corrected(
                 issue_id=issue_id,
@@ -533,11 +601,7 @@ class ReconcileDataQueryWriteService:
             "field_template_id": field_template_id,
             "message_text": thread.message_text,
             "message_type": thread.message_type,
-            "created_at": (
-                timezone.localtime(thread.created_at)
-                if timezone.is_aware(thread.created_at)
-                else thread.created_at
-            ),
+            "created_at": (timezone.localtime(thread.created_at) if timezone.is_aware(thread.created_at) else thread.created_at),
         }
 
     def reply_to_query(
@@ -585,11 +649,7 @@ class ReconcileDataQueryWriteService:
             "dataquery_id": dataquery_id,
             "message_text": thread.message_text,
             "message_type": thread.message_type,
-            "created_at": (
-                timezone.localtime(thread.created_at)
-                if timezone.is_aware(thread.created_at)
-                else thread.created_at
-            ),
+            "created_at": (timezone.localtime(thread.created_at) if timezone.is_aware(thread.created_at) else thread.created_at),
             "status": "answered",
             "changed": True,
             "closed": False,
@@ -843,11 +903,7 @@ class ReconcileDataQueryWriteService:
             "dataquery_id": dataquery_id,
             "message_text": thread.message_text,
             "message_type": thread.message_type,
-            "created_at": (
-                timezone.localtime(thread.created_at)
-                if timezone.is_aware(thread.created_at)
-                else thread.created_at
-            ),
+            "created_at": (timezone.localtime(thread.created_at) if timezone.is_aware(thread.created_at) else thread.created_at),
             "status": status,
             "changed": changed,
         }

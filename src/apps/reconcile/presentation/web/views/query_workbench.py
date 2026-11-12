@@ -7,7 +7,7 @@ from django.views.generic import TemplateView
 from django_tables2.views import RequestConfig
 
 from apps.identity.presentation.access import get_authorization_context
-from apps.reconcile.application.services.query_workbench import QUERY_WORKBENCH_BUCKETS, QueryWorkbenchReader
+from apps.reconcile.application.services.query_workbench import QueryWorkbenchReader
 from apps.reconcile.presentation.web.forms import QueryWorkbenchFilterForm
 from apps.reconcile.presentation.web.tables import QueryWorkbenchTable, ValidationIssueWorkbenchTable
 from apps.shared.context_processors import SiteDropdownHandler, StudyDropdownHandler
@@ -20,8 +20,9 @@ VIEW_INTERNAL_QUERY_THREAD_PERMISSION = "reconcile.view_internal_query_thread"
 ANSWER_QUERY_PERMISSION = "QUERY.RESPOND"
 RESOLVE_QUERY_PERMISSION = "QUERY.CLOSE"
 CLOSE_QUERY_PERMISSION = "QUERY.CLOSE"
-REOPEN_QUERY_PERMISSION = "QUERY.RETURN"
+REOPEN_QUERY_PERMISSION = "QUERY.REOPEN"
 CANCEL_QUERY_PERMISSION = "QUERY.CANCEL"
+REOPEN_VALIDATION_ISSUE_PERMISSION = "VALIDATION_ISSUE.REOPEN"
 
 
 class QueryWorkbenchView(AuthenticateTemplateContextMixin, SubjectAbstractVerifyStudy, TemplateView):
@@ -34,20 +35,27 @@ class QueryWorkbenchView(AuthenticateTemplateContextMixin, SubjectAbstractVerify
     paginate_by = 25
 
     def get_selected_site_id(self):
-        return SiteDropdownHandler(
-            request=self.request,
-            study_id=self.get_study_id(),
-        ).build().selected_id
+        return (
+            SiteDropdownHandler(
+                request=self.request,
+                study_id=self.get_study_id(),
+            )
+            .build()
+            .selected_id
+        )
 
     def get(self, request, *args, **kwargs):
         path_study_id = self.get_study_id()
         resolved_study_id = StudyDropdownHandler(request=request).build().selected_id
         if path_study_id and resolved_study_id:
             if path_study_id == resolved_study_id:
+                if request.GET.get("bucket") == "validation_issues" and not request.GET.get("source"):
+                    query_params = request.GET.copy()
+                    query_params.pop("bucket", None)
+                    query_params["source"] = "validation_issues"
+                    return redirect(f"{request.path}?{query_params.urlencode()}")
                 if not request.GET:
-                    return redirect(
-                        f"{request.path}?{urlencode({'status': 'open', 'assigned_to_me': 'on', 'opened_by_me': 'on'})}"
-                    )
+                    return redirect(f"{request.path}?{urlencode({'status': 'open', 'assigned_to_me': 'on', 'opened_by_me': 'on'})}")
                 return super().get(request, *args, **kwargs)
             return redirect(reverse("reconcile:query_workbench", kwargs={"study_id": resolved_study_id}))
         return redirect(get_default_authenticated_url(request))
@@ -62,8 +70,8 @@ class QueryWorkbenchView(AuthenticateTemplateContextMixin, SubjectAbstractVerify
         filter_form = QueryWorkbenchFilterForm(filter_params)
         filter_form.is_valid()
         cleaned = filter_form.cleaned_data
-        bucket = self.request.GET.get("bucket", "all")
-        bucket = bucket if bucket in QUERY_WORKBENCH_BUCKETS else "all"
+        source = cleaned.get("source") or ""
+        reader_bucket = "validation_issues" if source == "validation_issues" else "all"
         selected_site_id = self.get_selected_site_id()
         can_view_internal_thread = user_can_access_permission(
             self.request.user,
@@ -76,11 +84,11 @@ class QueryWorkbenchView(AuthenticateTemplateContextMixin, SubjectAbstractVerify
             site_id=selected_site_id,
             current_user_id=self.request.user.pk,
             can_view_internal_thread=can_view_internal_thread,
-            bucket=bucket,
+            bucket=reader_bucket,
             search=cleaned.get("search") or "",
             status=cleaned.get("status") or "",
             severity=cleaned.get("severity") or "",
-            source=cleaned.get("source") or "",
+            source="" if source == "validation_issues" else source,
             blocking=cleaned.get("blocking") or "",
             assigned_to_id=self.request.user.pk if cleaned.get("assigned_to_me") else None,
             opened_by_id=self.request.user.pk if cleaned.get("opened_by_me") else None,
@@ -88,24 +96,18 @@ class QueryWorkbenchView(AuthenticateTemplateContextMixin, SubjectAbstractVerify
         )
         table = QueryWorkbenchTable(result.items)
         validation_issue_table = ValidationIssueWorkbenchTable(result.validation_issues)
-        empty_text = (
-            _("No data queries match the current filters.")
-            if filter_params
-            else _("No data queries found for the selected study/site.")
-        )
+        empty_text = _("No data queries match the current filters.") if filter_params else _("No data queries found for the selected study/site.")
         table.empty_text = empty_text
         validation_issue_table.empty_text = _("No validation issues match the current filters.")
         RequestConfig(self.request, paginate={"per_page": self.paginate_by}).configure(table)
         RequestConfig(self.request, paginate={"per_page": self.paginate_by}).configure(validation_issue_table)
         context.update(
             {
-                "bucket": bucket,
-                "bucket_tabs": self._build_bucket_tabs(bucket, result.summary),
                 "filter_form": filter_form,
                 "summary": result.summary,
                 "table": table,
                 "validation_issue_table": validation_issue_table,
-                "show_validation_issues": bucket == "validation_issues",
+                "show_validation_issues": source == "validation_issues",
                 "empty_text": empty_text,
                 **self._query_action_permissions(selected_site_id=selected_site_id),
             }
@@ -144,45 +146,13 @@ class QueryWorkbenchView(AuthenticateTemplateContextMixin, SubjectAbstractVerify
                 study_id=self.get_study_id(),
                 site_id=selected_site_id,
             ),
+            "can_reopen_validation_issue": user_can_access_permission(
+                self.request.user,
+                REOPEN_VALIDATION_ISSUE_PERMISSION,
+                study_id=self.get_study_id(),
+                site_id=selected_site_id,
+            ),
         }
-
-    def _build_bucket_tabs(self, current_bucket, summary):
-        labels = {
-            "all": _("All"),
-            "open": _("Open"),
-            "awaiting_site": _("Waiting Site Response"),
-            "awaiting_review": _("Waiting CRA Review"),
-            "blocking": _("Blocking"),
-            "resolved": _("Resolved"),
-            "closed": _("Closed"),
-            "validation_issues": _("Validation Issues"),
-        }
-        counts = {
-            "all": summary.total,
-            "open": summary.open,
-            "awaiting_site": summary.awaiting_site_response,
-            "awaiting_review": summary.awaiting_review,
-            "blocking": summary.blocking_open,
-            "resolved": summary.resolved,
-            "closed": summary.closed,
-            "validation_issues": summary.validation_issues_open,
-        }
-        tabs = []
-        for bucket in QUERY_WORKBENCH_BUCKETS:
-            query_params = self.request.GET.copy()
-            query_params["bucket"] = bucket
-            query_string = urlencode(query_params, doseq=True)
-            tabs.append(
-                {
-                    "key": bucket,
-                    "label": labels[bucket],
-                    "count": counts[bucket],
-                    "is_active": bucket == current_bucket,
-                    "url": f"?{query_string}",
-                }
-            )
-        return tabs
-
 
 class QueryDetailView(AuthenticateTemplateContextMixin, SubjectAbstractVerifyStudy, TemplateView):
     permission_required = VIEW_QUERY_PERMISSION
@@ -258,6 +228,12 @@ class QueryDetailView(AuthenticateTemplateContextMixin, SubjectAbstractVerifyStu
             "can_cancel_dataquery": user_can_access_permission(
                 self.request.user,
                 CANCEL_QUERY_PERMISSION,
+                study_id=self.get_study_id(),
+                site_id=selected_site_id,
+            ),
+            "can_reopen_validation_issue": user_can_access_permission(
+                self.request.user,
+                REOPEN_VALIDATION_ISSUE_PERMISSION,
                 study_id=self.get_study_id(),
                 site_id=selected_site_id,
             ),

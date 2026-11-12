@@ -27,7 +27,6 @@ def _normalize_storage_scalar(value: Any) -> str:
 
 
 class FormFieldReviewTableService:
-
     def __init__(self, reconcile_read_service=None):
         self._reconcile_read_service = reconcile_read_service or ReconcileDataQueryReadService()
 
@@ -86,105 +85,71 @@ class FormFieldReviewTableService:
                 page_state_id=page_state_id,
                 field_template_ids=tuple(field_template_ids),
             )
-            verified_query_field_template_ids = (
-                self._reconcile_read_service.list_field_template_ids_with_verified_queries(
-                    page_state_id=page_state_id,
-                    field_template_ids=tuple(field_template_ids),
-                )
+            verified_query_field_template_ids = self._reconcile_read_service.list_field_template_ids_with_verified_queries(
+                page_state_id=page_state_id,
+                field_template_ids=tuple(field_template_ids),
             )
-            active_query_ids = (
-                self._reconcile_read_service.list_latest_active_query_ids_by_page_state_and_field_templates(
-                    page_state_id=page_state_id,
-                    field_template_ids=tuple(field_template_ids),
-                )
+            active_query_ids = self._reconcile_read_service.list_latest_active_query_ids_by_page_state_and_field_templates(
+                page_state_id=page_state_id,
+                field_template_ids=tuple(field_template_ids),
             )
-            active_query_participants = (
-                self._reconcile_read_service.list_latest_active_query_participants_by_page_state_and_field_templates(
-                    page_state_id=page_state_id,
-                    field_template_ids=tuple(field_template_ids),
-                )
+            active_query_participants = self._reconcile_read_service.list_latest_active_query_participants_by_page_state_and_field_templates(
+                page_state_id=page_state_id,
+                field_template_ids=tuple(field_template_ids),
             )
-            active_query_answered_flags = (
-                self._reconcile_read_service.list_latest_active_query_answered_flags_by_page_state_and_field_templates(
-                    page_state_id=page_state_id,
-                    field_template_ids=tuple(field_template_ids),
-                )
+            active_query_answered_flags = self._reconcile_read_service.list_latest_active_query_answered_flags_by_page_state_and_field_templates(
+                page_state_id=page_state_id,
+                field_template_ids=tuple(field_template_ids),
             )
             active_query_ids_tuple = tuple(active_query_ids.values())
             query_messages_by_query_for_field = self._reconcile_read_service.list_latest_query_messages_by_dataquery_ids(
                 dataquery_ids=active_query_ids_tuple,
                 limit_per_query=10,
             )
-            query_thread_badge_counts_by_active_query = (
-                self._reconcile_read_service.count_query_threads_since_current_user_last_comment_by_dataquery_ids(
-                    dataquery_ids=active_query_ids_tuple,
-                    current_user_id=current_user_id,
-                )
+            query_thread_badge_counts_by_active_query = self._reconcile_read_service.count_query_threads_since_current_user_last_comment_by_dataquery_ids(
+                dataquery_ids=active_query_ids_tuple,
+                current_user_id=current_user_id,
             )
-            query_messages_by_field = {
-                field_template_id: query_messages_by_query_for_field.get(dataquery_id, [])
-                for field_template_id, dataquery_id in active_query_ids.items()
-            }
-            query_thread_badge_counts = {
-                field_template_id: query_thread_badge_counts_by_active_query.get(dataquery_id, 0)
-                for field_template_id, dataquery_id in active_query_ids.items()
-            }
-            closed_query_histories_by_field = (
-                self._reconcile_read_service.list_closed_query_histories_by_page_state_and_field_templates(
-                    page_state_id=page_state_id,
-                    field_template_ids=tuple(field_template_ids),
-                    limit_per_query=10,
-                )
+            query_messages_by_field = {field_template_id: query_messages_by_query_for_field.get(dataquery_id, []) for field_template_id, dataquery_id in active_query_ids.items()}
+            query_thread_badge_counts = {field_template_id: query_thread_badge_counts_by_active_query.get(dataquery_id, 0) for field_template_id, dataquery_id in active_query_ids.items()}
+            closed_query_histories_by_field = self._reconcile_read_service.list_closed_query_histories_by_page_state_and_field_templates(
+                page_state_id=page_state_id,
+                field_template_ids=tuple(field_template_ids),
+                limit_per_query=10,
             )
-            validation_issues_by_field = (
-                self._reconcile_read_service.list_open_validation_issues_by_page_state_and_field_templates(
-                    page_state_id=page_state_id,
-                    field_template_ids=tuple(field_template_ids),
-                )
+            validation_issues_by_field = self._reconcile_read_service.list_open_validation_issues_by_page_state_and_field_templates(
+                page_state_id=page_state_id,
+                field_template_ids=tuple(field_template_ids),
             )
-            validation_issue_histories_by_field = (
-                self._reconcile_read_service.list_validation_issue_histories_by_page_state_and_field_templates(
-                    page_state_id=page_state_id,
-                    field_template_ids=tuple(field_template_ids),
-                )
+            validation_issue_histories_by_field = self._reconcile_read_service.list_validation_issue_histories_by_page_state_and_field_templates(
+                page_state_id=page_state_id,
+                field_template_ids=tuple(field_template_ids),
             )
             counts_by_field_path = self._reconcile_read_service.count_open_queries_by_page_state_field_paths(
                 page_state_id=page_state_id,
                 field_template_ids=tuple(field_template_ids),
             )
-            active_query_contexts_by_field_path = (
-                self._reconcile_read_service.list_latest_active_query_contexts_by_page_state_and_field_templates(
-                    page_state_id=page_state_id,
-                    field_template_ids=tuple(field_template_ids),
-                )
+            active_query_contexts_by_field_path = self._reconcile_read_service.list_latest_active_query_contexts_by_page_state_and_field_templates(
+                page_state_id=page_state_id,
+                field_template_ids=tuple(field_template_ids),
             )
-            verified_query_keys_by_field_path = (
-                self._reconcile_read_service.list_verified_query_keys_by_page_state_and_field_templates(
-                    page_state_id=page_state_id,
-                    field_template_ids=tuple(field_template_ids),
-                )
+            verified_query_keys_by_field_path = self._reconcile_read_service.list_verified_query_keys_by_page_state_and_field_templates(
+                page_state_id=page_state_id,
+                field_template_ids=tuple(field_template_ids),
             )
-            active_query_ids_by_path = tuple(
-                int(context["active_query_id"])
-                for context in active_query_contexts_by_field_path.values()
-                if context.get("active_query_id")
-            )
+            active_query_ids_by_path = tuple(int(context["active_query_id"]) for context in active_query_contexts_by_field_path.values() if context.get("active_query_id"))
             query_messages_by_query = self._reconcile_read_service.list_latest_query_messages_by_dataquery_ids(
                 dataquery_ids=active_query_ids_by_path,
                 limit_per_query=10,
             )
-            query_thread_badge_counts_by_query = (
-                self._reconcile_read_service.count_query_threads_since_current_user_last_comment_by_dataquery_ids(
-                    dataquery_ids=active_query_ids_by_path,
-                    current_user_id=current_user_id,
-                )
+            query_thread_badge_counts_by_query = self._reconcile_read_service.count_query_threads_since_current_user_last_comment_by_dataquery_ids(
+                dataquery_ids=active_query_ids_by_path,
+                current_user_id=current_user_id,
             )
-            closed_query_histories_by_field_path = (
-                self._reconcile_read_service.list_closed_query_histories_by_page_state_field_paths(
-                    page_state_id=page_state_id,
-                    field_template_ids=tuple(field_template_ids),
-                    limit_per_query=10,
-                )
+            closed_query_histories_by_field_path = self._reconcile_read_service.list_closed_query_histories_by_page_state_field_paths(
+                page_state_id=page_state_id,
+                field_template_ids=tuple(field_template_ids),
+                limit_per_query=10,
             )
 
         modified_by_display = get_username_display_for_user_id(entry_updated_by_id)
@@ -325,30 +290,12 @@ class FormFieldReviewTableService:
             verified_query_keys_by_field_path=verified_query_keys_by_field_path,
             closed_query_histories_by_field_path=closed_query_histories_by_field_path,
         )
-        active_query_context = (
-            active_query_contexts_by_field_path.get(query_key)
-            if query_key is not None
-            else None
-        )
-        active_query_id = (
-            active_query_context.get("active_query_id")
-            if active_query_context is not None
-            else (
-                None
-                if is_repeatable_group_item
-                else active_query_ids.get(field_template_id)
-            )
-        )
+        active_query_context = active_query_contexts_by_field_path.get(query_key) if query_key is not None else None
+        active_query_id = active_query_context.get("active_query_id") if active_query_context is not None else (None if is_repeatable_group_item else active_query_ids.get(field_template_id))
         active_query_id_int = int(active_query_id) if active_query_id else None
-        open_query_count = (
-            counts_by_field_path.get(query_key, 0)
-            if query_key is not None
-            else (0 if is_repeatable_group_item else int(counts.get(field_template_id, 0)))
-        )
+        open_query_count = counts_by_field_path.get(query_key, 0) if query_key is not None else (0 if is_repeatable_group_item else int(counts.get(field_template_id, 0)))
         has_verified_query = (
-            query_key in verified_query_keys_by_field_path
-            if query_key is not None
-            else (False if is_repeatable_group_item else field_template_id in verified_query_field_template_ids)
+            query_key in verified_query_keys_by_field_path if query_key is not None else (False if is_repeatable_group_item else field_template_id in verified_query_field_template_ids)
         )
         validation_issues = self._format_validation_issues(
             validation_issues_by_field.get(field_template_id, []),
@@ -357,9 +304,7 @@ class FormFieldReviewTableService:
         )
         validation_issue_count = len(validation_issues)
         closed_query_histories = self._format_closed_query_histories(
-            closed_query_histories_by_field_path.get(query_key, [])
-            if query_key is not None
-            else ([] if is_repeatable_group_item else closed_query_histories_by_field.get(field_template_id, [])),
+            closed_query_histories_by_field_path.get(query_key, []) if query_key is not None else ([] if is_repeatable_group_item else closed_query_histories_by_field.get(field_template_id, [])),
         )
         validation_issue_histories = self._format_validation_issue_histories(
             validation_issue_histories_by_field.get(field_template_id, []),
@@ -394,16 +339,10 @@ class FormFieldReviewTableService:
             ),
             "active_query_can_respond": self._user_can_respond_to_query(
                 current_user_id=current_user_id,
-                participants=(
-                    active_query_context
-                    if active_query_context is not None
-                    else active_query_participants.get(field_template_id)
-                ),
+                participants=(active_query_context if active_query_context is not None else active_query_participants.get(field_template_id)),
             ),
             "active_query_is_answered": (
-                bool(active_query_context.get("active_query_is_answered"))
-                if active_query_context is not None
-                else bool(active_query_answered_flags.get(field_template_id, False))
+                bool(active_query_context.get("active_query_is_answered")) if active_query_context is not None else bool(active_query_answered_flags.get(field_template_id, False))
             ),
             "has_verified_query": has_verified_query,
             "query_thread_badge_count": (
@@ -412,9 +351,7 @@ class FormFieldReviewTableService:
                 else (0 if is_repeatable_group_item else int(query_thread_badge_counts.get(field_template_id, 0)))
             ),
             "query_messages": self._format_query_messages(
-                query_messages_by_query.get(active_query_id_int, [])
-                if active_query_id_int is not None
-                else ([] if is_repeatable_group_item else query_messages_by_field.get(field_template_id, [])),
+                query_messages_by_query.get(active_query_id_int, []) if active_query_id_int is not None else ([] if is_repeatable_group_item else query_messages_by_field.get(field_template_id, [])),
             ),
             "closed_query_histories": closed_query_histories,
             "validation_issue_histories": validation_issue_histories,
@@ -449,12 +386,7 @@ class FormFieldReviewTableService:
     ) -> tuple[int, str] | None:
         for field_path in field_path_candidates:
             key = (field_template_id, str(field_path or "").strip())
-            if (
-                key in active_query_contexts_by_field_path
-                or key in counts_by_field_path
-                or key in verified_query_keys_by_field_path
-                or key in closed_query_histories_by_field_path
-            ):
+            if key in active_query_contexts_by_field_path or key in counts_by_field_path or key in verified_query_keys_by_field_path or key in closed_query_histories_by_field_path:
                 return key
         return None
 
@@ -515,17 +447,9 @@ class FormFieldReviewTableService:
     def _group_fields_by_section(cls, field_templates_payload: list[dict[str, Any]]) -> list[dict[str, Any]]:
         sections_by_key: dict[str, dict[str, Any]] = {}
         for field_position, field_row in enumerate(field_templates_payload or []):
-            section_template = (
-                field_row.get("section_template")
-                if isinstance(field_row.get("section_template"), dict)
-                else {}
-            )
+            section_template = field_row.get("section_template") if isinstance(field_row.get("section_template"), dict) else {}
             section_title = str(section_template.get("name") or "").strip() or "General"
-            section_key = str(
-                section_template.get("id")
-                or section_template.get("code")
-                or f"general::{section_title}"
-            )
+            section_key = str(section_template.get("id") or section_template.get("code") or f"general::{section_title}")
             if section_key not in sections_by_key:
                 sections_by_key[section_key] = {
                     "key": section_key,
@@ -595,10 +519,7 @@ class FormFieldReviewTableService:
         field_template_id: int,
         repeat_index: int,
     ) -> list[str]:
-        return [
-            cls._repeat_field_key(alias, repeat_index)
-            for alias in cls._base_storage_aliases(field_key, field_template_id)
-        ]
+        return [cls._repeat_field_key(alias, repeat_index) for alias in cls._base_storage_aliases(field_key, field_template_id)]
 
     @classmethod
     def _resolve_repeat_count_for_section(
@@ -626,9 +547,7 @@ class FormFieldReviewTableService:
                     repeat_count = max(repeat_count, 1)
         escaped_aliases = [re.escape(alias) for alias in aliases if alias]
         if escaped_aliases and isinstance(payload, dict):
-            repeat_pattern = re.compile(
-                rf"^(?:{'|'.join(escaped_aliases)}){_REPEAT_SUFFIX_RE.pattern}"
-            )
+            repeat_pattern = re.compile(rf"^(?:{'|'.join(escaped_aliases)}){_REPEAT_SUFFIX_RE.pattern}")
             for payload_key, payload_value in payload.items():
                 matched = repeat_pattern.match(str(payload_key))
                 if matched and cls._has_meaningful_form_value(payload_value):
@@ -663,11 +582,7 @@ class FormFieldReviewTableService:
             return False
         if storage_key in payload and cls._has_meaningful_form_value(payload.get(storage_key)):
             return True
-        return any(
-            cls._has_meaningful_form_value(payload.get(f"{storage_key}{suffix}"))
-            for suffix in _DATE_PART_SUFFIXES
-            if f"{storage_key}{suffix}" in payload
-        )
+        return any(cls._has_meaningful_form_value(payload.get(f"{storage_key}{suffix}")) for suffix in _DATE_PART_SUFFIXES if f"{storage_key}{suffix}" in payload)
 
     @staticmethod
     def _has_meaningful_form_value(value: Any) -> bool:
@@ -870,55 +785,61 @@ class FormFieldReviewTableService:
             grouped.setdefault(issue.get("validation_issue_id") or issue.get("id"), []).append(issue)
         histories = []
         for issue_id, snapshots in grouped.items():
-            snapshots.sort(key=lambda item: (
-                item.get("created_at") is not None,
-                item.get("created_at") or datetime.min,
-                int(item.get("id") or 0),
-            ))
+            snapshots.sort(
+                key=lambda item: (
+                    item.get("created_at") is not None,
+                    item.get("created_at") or datetime.min,
+                    int(item.get("id") or 0),
+                )
+            )
             messages = []
             latest_status = "OPEN"
             for snapshot in snapshots:
                 acknowledged = snapshot.get("source") == "VALIDATION_ISSUE_ACKNOWLEDGEMENT"
-                latest_status = "Acknowledged" if acknowledged else (
-                    str(snapshot.get("result") or snapshot.get("status") or "OPEN").strip().upper()
-                )
+                reopened = snapshot.get("result") == "REOPENED"
+                latest_status = "Acknowledged" if acknowledged else ("Reopened" if reopened else str(snapshot.get("result") or snapshot.get("status") or "OPEN").strip().upper())
                 if not acknowledged and snapshot.get("acknowledgment_preserved") and latest_status == "FAIL":
                     latest_status = "Acknowledgement retained"
                 value = self._resolve_display_value(
-                    raw_value=snapshot.get("evaluated_value"), control_norm=control_norm,
+                    raw_value=snapshot.get("evaluated_value"),
+                    control_norm=control_norm,
                     label_by_value=label_by_value,
                 )
                 # Format each snapshot independently so the generic query's ten-message cap
                 # cannot silently truncate a validation issue's audit history.
-                message = self._format_query_messages([{
-                    "dataquery_id": f"validation_issue_{issue_id}_snapshot_{snapshot.get('id')}",
-                    "text": snapshot.get("message"), "status": latest_status,
-                    "tone": "resolved" if acknowledged or latest_status in {"PASS", "Acknowledgement retained"} else "warning",
-                    "created_at": snapshot.get("created_at"),
-                    "opened_by_id": snapshot.get("triggered_by"),
-                }])[0]
+                message = self._format_query_messages(
+                    [
+                        {
+                            "dataquery_id": f"validation_issue_{issue_id}_snapshot_{snapshot.get('id')}",
+                            "text": snapshot.get("message"),
+                            "status": latest_status,
+                            "tone": "resolved" if acknowledged or latest_status in {"PASS", "Acknowledgement retained"} else "warning",
+                            "created_at": snapshot.get("created_at"),
+                            "opened_by_id": snapshot.get("triggered_by"),
+                        }
+                    ]
+                )[0]
                 timestamp = snapshot.get("created_at")
                 if timestamp is not None:
                     local_timestamp = timezone.localtime(timestamp) if timezone.is_aware(timestamp) else timestamp
-                    message["opened_at"] = (
-                        f"{formats.date_format(local_timestamp, 'SHORT_DATE_FORMAT')} "
-                        f"{formats.time_format(local_timestamp, 'H:i:s')}"
-                    )
+                    message["opened_at"] = f"{formats.date_format(local_timestamp, 'SHORT_DATE_FORMAT')} {formats.time_format(local_timestamp, 'H:i:s')}"
                 message["value_snapshot"] = value
                 messages.append(message)
             first, last = snapshots[0], snapshots[-1]
-            histories.append({
-                "dataquery_id": f"validation_issue_{issue_id}",
-                "status": latest_status,
-                "label": f"Validation Issue #{issue_id}" if issue_id else "Validation Issue",
-                "question_text": str(first.get("message") or "").strip(),
-                "opened_at": self._format_datetime(first.get("created_at")),
-                "closed_at": self._format_datetime(last.get("created_at")),
-                "value_snapshot": messages[-1]["value_snapshot"],
-                "messages": messages,
-                "_sort": (last.get("created_at") is not None, last.get("created_at") or datetime.min,
-                          int(last.get("id") or 0)),
-            })
+            histories.append(
+                {
+                    "dataquery_id": f"validation_issue_{issue_id}",
+                    "validation_issue_id": issue_id,
+                    "status": latest_status,
+                    "label": f"Validation Issue #{issue_id}" if issue_id else "Validation Issue",
+                    "question_text": str(first.get("message") or "").strip(),
+                    "opened_at": self._format_datetime(first.get("created_at")),
+                    "closed_at": self._format_datetime(last.get("created_at")),
+                    "value_snapshot": messages[-1]["value_snapshot"],
+                    "messages": messages,
+                    "_sort": (last.get("created_at") is not None, last.get("created_at") or datetime.min, int(last.get("id") or 0)),
+                }
+            )
         histories.sort(key=lambda history: history["_sort"], reverse=True)
         for history in histories:
             history.pop("_sort")

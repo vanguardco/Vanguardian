@@ -197,10 +197,7 @@ APP_PERMISSION_DEFINITIONS = (
 )
 
 
-APP_PERMISSION_LABELS = {
-    definition.permission_code: definition.label
-    for definition in APP_PERMISSION_DEFINITIONS
-}
+APP_PERMISSION_LABELS = {definition.permission_code: definition.label for definition in APP_PERMISSION_DEFINITIONS}
 
 
 EDC_PERMISSION_LABELS = {
@@ -222,11 +219,13 @@ EDC_PERMISSION_LABELS = {
     "CRF.REOPEN": "Reopen CRF data",
     "VALIDATION_ISSUE.VIEW": "View validation issues",
     "VALIDATION_ISSUE.ACKNOWLEDGE": "Acknowledge validation issues",
+    "VALIDATION_ISSUE.REOPEN": "Reopen acknowledged validation issues",
     "QUERY.VIEW": "View data queries",
     "QUERY.CREATE": "Create data queries",
     "QUERY.RESPOND": "Respond to data queries",
     "QUERY.CLOSE": "Close data queries",
     "QUERY.RETURN": "Return data queries",
+    "QUERY.REOPEN": "Reopen resolved or closed data queries",
     "QUERY.CANCEL": "Cancel data queries",
     "SDV.VIEW": "View SDV",
     "SDV.MARK": "Mark SDV",
@@ -255,10 +254,7 @@ EDC_PERMISSION_LABELS = {
 }
 
 
-EDC_PERMISSION_DEFINITIONS = tuple(
-    PermissionDefinition("edc", codename, label)
-    for codename, label in EDC_PERMISSION_LABELS.items()
-)
+EDC_PERMISSION_DEFINITIONS = tuple(PermissionDefinition("edc", codename, label) for codename, label in EDC_PERMISSION_LABELS.items())
 
 
 ALL_PERMISSION_DEFINITIONS = APP_PERMISSION_DEFINITIONS + EDC_PERMISSION_DEFINITIONS

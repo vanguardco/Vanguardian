@@ -68,10 +68,7 @@ class DjangoReconcileDataQueryReadRepository:
                 form_instance_id=page_state_id,
                 status__in=self.OPEN_VALIDATION_ISSUE_STATUSES,
             )
-            .filter(
-                Q(field_instance__field_template_id__in=field_template_ids)
-                | Q(field_instance_id__isnull=True, rule__field_template_id__in=field_template_ids)
-            )
+            .filter(Q(field_instance__field_template_id__in=field_template_ids) | Q(field_instance_id__isnull=True, rule__field_template_id__in=field_template_ids))
             .values(
                 "id",
                 "rule_id",
@@ -158,23 +155,14 @@ class DjangoReconcileDataQueryReadRepository:
         )
         grouped: dict[int, list[dict[str, object]]] = {}
         for row in rows:
-            field_template_id = (
-                row["validation_issue__field_instance__field_template_id"]
-                or row["validation_issue__rule__field_template_id"]
-            )
+            field_template_id = row["validation_issue__field_instance__field_template_id"] or row["validation_issue__rule__field_template_id"]
             if field_template_id is None:
                 continue
             grouped.setdefault(int(field_template_id), []).append(
                 {
                     "id": int(row["id"]),
-                    "validation_issue_id": (
-                        int(row["validation_issue_id"]) if row["validation_issue_id"] is not None else None
-                    ),
-                    "rule_id": (
-                        int(row["validation_issue__rule_id"])
-                        if row["validation_issue__rule_id"] is not None
-                        else None
-                    ),
+                    "validation_issue_id": (int(row["validation_issue_id"]) if row["validation_issue_id"] is not None else None),
+                    "rule_id": (int(row["validation_issue__rule_id"]) if row["validation_issue__rule_id"] is not None else None),
                     "field_instance_id": row["validation_issue__field_instance_id"],
                     "mode": row["validation_issue__mode"],
                     "result": row["result"],
@@ -184,9 +172,7 @@ class DjangoReconcileDataQueryReadRepository:
                         else row["evaluated_values_json"]
                     ),
                     "acknowledgment_preserved": (
-                        bool(row["evaluated_values_json"].get("acknowledged"))
-                        if isinstance(row["evaluated_values_json"], dict) and "_validation_context" in row["evaluated_values_json"]
-                        else False
+                        bool(row["evaluated_values_json"].get("acknowledged")) if isinstance(row["evaluated_values_json"], dict) and "_validation_context" in row["evaluated_values_json"] else False
                     ),
                     "validation_run_id": row["validation_run_id"],
                     "source": row["validation_run__source"],
@@ -204,10 +190,7 @@ class DjangoReconcileDataQueryReadRepository:
                 form_instance_id=page_state_id,
                 status__in=self.OPEN_VALIDATION_ISSUE_STATUSES,
             )
-            .filter(
-                Q(field_instance__field_template_id=field_template_id)
-                | Q(field_instance_id__isnull=True, rule__field_template_id=field_template_id)
-            )
+            .filter(Q(field_instance__field_template_id=field_template_id) | Q(field_instance_id__isnull=True, rule__field_template_id=field_template_id))
             .exists()
         )
 
@@ -221,19 +204,12 @@ class DjangoReconcileDataQueryReadRepository:
             return set()
         rows = (
             ReconcileValidationIssue.objects.filter(form_instance_id=page_state_id)
-            .filter(
-                Q(field_instance__field_template_id__in=field_template_ids)
-                | Q(field_instance_id__isnull=True, rule__field_template_id__in=field_template_ids)
-            )
+            .filter(Q(field_instance__field_template_id__in=field_template_ids) | Q(field_instance_id__isnull=True, rule__field_template_id__in=field_template_ids))
             .annotate(resolved_field_template_id=Coalesce("field_instance__field_template_id", "rule__field_template_id"))
             .values_list("resolved_field_template_id", flat=True)
             .distinct()
         )
-        return {
-            int(field_template_id)
-            for field_template_id in rows
-            if field_template_id is not None
-        }
+        return {int(field_template_id) for field_template_id in rows if field_template_id is not None}
 
     def list_field_template_ids_with_verified_queries(
         self,
@@ -299,10 +275,7 @@ class DjangoReconcileDataQueryReadRepository:
             .values("field_template_id", "field_path")
             .distinct()
         )
-        return {
-            (int(row["field_template_id"]), self._normalize_field_path(row["field_path"]))
-            for row in rows
-        }
+        return {(int(row["field_template_id"]), self._normalize_field_path(row["field_path"])) for row in rows}
 
     def count_open_queries_by_page_state_field_paths(
         self,
@@ -323,10 +296,7 @@ class DjangoReconcileDataQueryReadRepository:
             .values("field_template_id", "field_path")
             .annotate(query_count=Count("id"))
         )
-        return {
-            (int(row["field_template_id"]), self._normalize_field_path(row["field_path"])): int(row["query_count"])
-            for row in rows
-        }
+        return {(int(row["field_template_id"]), self._normalize_field_path(row["field_path"])): int(row["query_count"]) for row in rows}
 
     def list_latest_active_query_contexts_by_page_state_and_field_templates(
         self,
@@ -367,9 +337,7 @@ class DjangoReconcileDataQueryReadRepository:
                     "opened_by_id": row["opened_by_id"],
                     "assigned_to_id": row["assigned_to_id"],
                     "active_query_status": row["status"],
-                    "active_query_is_answered": (
-                        row["answered_at"] is not None or row["answered_by_id"] is not None
-                    ),
+                    "active_query_is_answered": (row["answered_at"] is not None or row["answered_by_id"] is not None),
                 },
             )
         return out
@@ -838,11 +806,7 @@ class DjangoReconcileDataQueryReadRepository:
             "open": queryset.filter(status=ReconcileDataQueryStatusChoices.OPEN).count(),
             "awaiting_site_response": queryset.filter(status="open").count(),
             "awaiting_review": queryset.filter(status=ReconcileDataQueryStatusChoices.ANSWERED).count(),
-            "blocking_open": (
-                queryset.filter(is_blocking=True)
-                .exclude(status__in=inactive_statuses)
-                .count()
-            ),
+            "blocking_open": (queryset.filter(is_blocking=True).exclude(status__in=inactive_statuses).count()),
             "resolved": queryset.filter(status=ReconcileDataQueryStatusChoices.RESOLVED).count(),
             "closed": queryset.filter(status=ReconcileDataQueryStatusChoices.CLOSED).count(),
             "validation_issues_open": validation_issue_count,
@@ -851,9 +815,7 @@ class DjangoReconcileDataQueryReadRepository:
         }
 
     def list_page_state_ids_with_open_workbench_items(self, *, page_state_ids: tuple[int, ...]) -> set[int]:
-        normalized_page_state_ids = tuple(
-            dict.fromkeys(int(page_state_id) for page_state_id in page_state_ids or () if page_state_id)
-        )
+        normalized_page_state_ids = tuple(dict.fromkeys(int(page_state_id) for page_state_id in page_state_ids or () if page_state_id))
         if not normalized_page_state_ids:
             return set()
         query_page_state_ids = ReconcileDataQuery.objects.filter(
@@ -865,9 +827,7 @@ class DjangoReconcileDataQueryReadRepository:
             form_instance_id__in=normalized_page_state_ids,
             status__in=self.WORKBENCH_OPEN_VALIDATION_ISSUE_STATUSES,
         ).values_list("form_instance_id", flat=True)
-        return {int(page_state_id) for page_state_id in query_page_state_ids} | {
-            int(page_state_id) for page_state_id in validation_issue_page_state_ids
-        }
+        return {int(page_state_id) for page_state_id in query_page_state_ids} | {int(page_state_id) for page_state_id in validation_issue_page_state_ids}
 
     def count_open_queries_assigned_to_user(
         self,
@@ -955,11 +915,7 @@ class DjangoReconcileDataQueryReadRepository:
             field_template = query.field_template
             field_label = ""
             if field_template is not None:
-                field_label = (
-                    field_template.safe_translation_getter("label", default="", any_language=True)
-                    if hasattr(field_template, "safe_translation_getter")
-                    else ""
-                )
+                field_label = field_template.safe_translation_getter("label", default="", any_language=True) if hasattr(field_template, "safe_translation_getter") else ""
             rows.append(
                 {
                     "query_id": int(query.pk),
@@ -993,12 +949,7 @@ class DjangoReconcileDataQueryReadRepository:
         query_id: int,
         can_view_internal_thread: bool = False,
     ) -> dict[str, object] | None:
-        query = (
-            ReconcileDataQuery.objects.filter(pk=query_id, deleted=False)
-            .select_related("field_template")
-            .prefetch_related("field_template__translations")
-            .first()
-        )
+        query = ReconcileDataQuery.objects.filter(pk=query_id, deleted=False).select_related("field_template").prefetch_related("field_template__translations").first()
         if query is None:
             return None
         rows = self.list_workbench_queries(
@@ -1046,32 +997,57 @@ class DjangoReconcileDataQueryReadRepository:
         *,
         page_state_ids: tuple[int, ...],
         search: str = "",
+        severity: str = "",
     ) -> list[dict[str, object]]:
         if not page_state_ids:
             return []
-        queryset = ReconcileValidationIssue.objects.filter(
-            form_instance_id__in=page_state_ids,
-            status__in=(
-                ReconcileValidationIssueStatusChoices.OPEN,
-                ReconcileValidationIssueStatusChoices.ACKNOWLEDGEMENT_REQUIRED,
-                ReconcileValidationIssueStatusChoices.QUERY_CREATED,
-            ),
+        queryset = (
+            ReconcileValidationIssue.objects.filter(form_instance_id__in=page_state_ids)
+            .select_related("rule__field_template", "field_instance__field_template")
+            .prefetch_related(
+                "rule__field_template__translations",
+                "field_instance__field_template__translations",
+            )
         )
         if search:
-            queryset = queryset.filter(Q(message__icontains=search) | Q(severity__icontains=search))
-        return [
-            {
-                "issue_id": int(issue.pk),
-                "page_state_id": int(issue.form_instance_id),
-                "status": issue.status,
-                "severity": issue.severity,
-                "message": issue.message,
-                "failed_value": issue.failed_value,
-                "created_at": issue.created_at,
-                "resolved_at": issue.resolved_at,
-            }
-            for issue in queryset.order_by("-created_at", "-id")
-        ]
+            search_filter = (
+                Q(message__icontains=search)
+                | Q(severity__icontains=search)
+                | Q(status__icontains=search)
+                | Q(rule__field_template__translations__label__icontains=search)
+                | Q(field_instance__field_template__translations__label__icontains=search)
+            )
+            if search.isdigit():
+                search_filter |= Q(pk=int(search))
+            queryset = queryset.filter(search_filter).distinct()
+        if severity:
+            queryset = queryset.filter(severity__iexact=severity)
+        rows: list[dict[str, object]] = []
+        for issue in queryset.order_by("-created_at", "-id"):
+            field_template = None
+            if issue.field_instance_id is not None:
+                field_template = getattr(issue.field_instance, "field_template", None)
+            if field_template is None:
+                field_template = getattr(issue.rule, "field_template", None)
+            field_label = ""
+            if field_template is not None:
+                field_label = field_template.safe_translation_getter("label", default="", any_language=True) if hasattr(field_template, "safe_translation_getter") else ""
+            rows.append(
+                {
+                    "issue_id": int(issue.pk),
+                    "page_state_id": int(issue.form_instance_id),
+                    "status": issue.status,
+                    "severity": issue.severity,
+                    "message": issue.message,
+                    "failed_value": issue.failed_value,
+                    "created_at": issue.created_at,
+                    "resolved_at": issue.resolved_at,
+                    "acknowledged_by_id": issue.acknowledged_by,
+                    "acknowledged_at": issue.acknowledged_at,
+                    "field_label": field_label,
+                }
+            )
+        return rows
 
     @staticmethod
     def _visible_thread_filter(can_view_internal_thread: bool) -> Q:
@@ -1119,9 +1095,7 @@ class DjangoReconcileDataQueryReadRepository:
         elif blocking == "no":
             queryset = queryset.filter(is_blocking=False)
         if assigned_to_id is not None and opened_by_id is not None:
-            queryset = queryset.filter(
-                Q(assigned_to_id=assigned_to_id) | Q(opened_by_id=opened_by_id)
-            )
+            queryset = queryset.filter(Q(assigned_to_id=assigned_to_id) | Q(opened_by_id=opened_by_id))
         elif assigned_to_id is not None:
             queryset = queryset.filter(assigned_to_id=assigned_to_id)
         elif opened_by_id is not None:
