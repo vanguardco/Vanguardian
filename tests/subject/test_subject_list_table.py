@@ -66,10 +66,8 @@ class SubjectListTableTests(SimpleTestCase):
         self.assertIn("validation_issues", table.columns.names())
         self.assertNotIn("current_visit", table.columns.names())
         self.assertNotIn("query_status", table.columns.names())
-        self.assertLess(
-            table.columns.names().index("screening_code"),
-            table.columns.names().index("screening"),
-        )
+        self.assertIn("screening_code", table.columns.names())
+        self.assertNotIn("screening", table.columns.names())
         self.assertLess(
             table.columns.names().index("randomization_code"),
             table.columns.names().index("randomization"),

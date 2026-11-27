@@ -24,11 +24,6 @@ class SubjectListTable(tables.Table):
             },
         },
     )
-    screening = tables.Column(
-        empty_values=(),
-        verbose_name=_("SCREENING"),
-        orderable=False,
-    )
     enrollment = tables.Column(
         empty_values=(),
         verbose_name=_("Enrollment"),
@@ -141,10 +136,6 @@ class SubjectListTable(tables.Table):
             if is_eligible
         )
 
-    @staticmethod
-    def render_screening(record):
-        return date_format(record.created_at, "DATETIME_FORMAT") if record.created_at else "—"
-
     def render_enrollment(self, record):
         try:
             is_enrolled = record.enrollment.is_enrolled
@@ -202,7 +193,6 @@ class SubjectListTable(tables.Table):
         }
         fields = (
             "screening_code",
-            "screening",
             "enrollment",
             "lifecycle_status",
             "randomization_code",
